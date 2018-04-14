@@ -1,20 +1,38 @@
-LOADER_SOURCES_S=$(shell find src/loader -name *.s -type f)
 LOADER_SOURCES_CXX=$(shell find src/loader -name *.cpp -type f)
 LOADER_OBJECTS=$(LOADER_SOURCES_S:src/loader/%.s=build/loader/%.o) $(LOADER_SOURCES_CXX:src/loader/%.cpp=build/loader/%.o)
+LOADER_HEADERS=$(shell find src/loader -name *.hpp -type f)
 
 LOADER_CXXFLAGS=-ffreestanding \
-			  -ggdb
+			    -ggdb \
+				-Isrc/loader \
+				-fno-rtti \
+				-fno-exceptions \
+				-fno-builtin \
+				-Wall \
+				-Wextra \
+				-Werror \
+				-Wold-style-cast \
+				-Wno-unused-variable \
+				-Wno-unused-but-set-variable \
+				-Wno-unused-parameter \
+				-Wimplicit-fallthrough \
+				-std=c++1z
 
 LOADER_ASFLAGS=--32
 
 LOADER_LDFLAGS=-nostdlib \
 			   -O0 \
 			   -ggdb \
-			   -Tloader.lds
+			   -Tloader.lds \
+			   -ffreestanding
 
 LD32=$(TOOLCHAIN32)/bin/$(TARGET32)-g++
 AS32=$(TOOLCHAIN32)/bin/$(TARGET32)-as
 CXX32=$(TOOLCHAIN32)/bin/$(TARGET32)-g++
+
+LOADER_CRTBEGIN=$(shell $(CXX32) -print-file-name=crtbegin.o)
+LOADER_CRTEND=$(shell $(CXX32) -print-file-name=crtend.o)
+LOADER_LIBGCC=$(shell $(CXX32) --print-libgcc-file-name)
 
 DIRS=build/iso/boot/grub $(shell dirname $(LOADER_OBJECTS))
 
@@ -23,13 +41,20 @@ all: build/image.iso
 mkdirs:
 	@mkdir -p $(DIRS)
 
-build/loader.elf: mkdirs $(LOADER_OBJECTS)
-	$(LD32) -o $@ $(LOADER_LDFLAGS) $(LOADER_OBJECTS)
+build/loader.elf: mkdirs build/loader/boot/multiboot.o build/loader/crti.o build/loader/crtn.o $(LOADER_OBJECTS)
+	$(LD32) -o $@ $(LOADER_LDFLAGS) \
+	    build/loader/boot/multiboot.o \
+		build/loader/crti.o \
+		$(LOADER_CRTBEGIN) \
+		$(LOADER_OBJECTS) \
+		$(LOADER_LIBGCC) \
+		$(LOADER_CRTEND) \
+		build/loader/crtn.o
 
 build/loader/%.o: src/loader/%.s
 	$(AS32) -o $@ $(LOADER_ASFLAGS) $<
 
-build/loader/%.o: src/loader/%.cpp
+build/loader/%.o: src/loader/%.cpp $(LOADER_HEADERS)
 	$(CXX32) -c -o $@ $(LOADER_CXXFLAGS) $<
 
 build/image.iso: build/loader.elf src/grub/grub.cfg
@@ -38,4 +63,10 @@ build/image.iso: build/loader.elf src/grub/grub.cfg
 	grub-mkrescue -o $@ build/iso
 
 qemu-run: build/image.iso
-	qemu-system-x86_64 -cdrom build/image.iso -m 512 -enable-kvm
+	qemu-system-i386 -cdrom build/image.iso -m 512 -enable-kvm -serial stdio
+
+qemu-gdb: build/image.iso
+	qemu-system-i386 -cdrom build/image.iso -m 512 -S -s -serial stdio
+
+clean:
+	rm -rf build

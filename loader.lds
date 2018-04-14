@@ -2,6 +2,10 @@ ENTRY(multiboot_entry)
 SECTIONS {
     . = 0x100000;
   
+	.init : {
+		*(.init)
+	}
+
     .text BLOCK(4K) : ALIGN(4K)
 	{
 		*(.multiboot)

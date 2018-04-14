@@ -17,9 +17,13 @@
 .global multiboot_entry
 .align 16
 multiboot_entry:
+    movl %ebx, mb_info_ptr
+    movl $stack_top, %esp
+
     lgdt (gdtr32)
 
-    jmp loader_main
+    call _init
+    call loader_main
 
 .align 16
 gdt32:
@@ -29,3 +33,14 @@ gdt32:
 gdtr32:
     .long gdt32
     .word (gdtr32 - gdt32 - 1)
+
+.global mb_info_ptr
+.align 4
+mb_info_ptr:
+    .long 0
+
+.section .bss
+.align 16
+stack_bottom:
+    .skip 65536
+stack_top:

@@ -1,0 +1,6 @@
+target remote localhost:1234
+sy build/loader.elf
+b multiboot_entry
+b loader_main
+c
+layout split
