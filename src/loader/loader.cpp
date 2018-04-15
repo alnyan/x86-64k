@@ -1,13 +1,20 @@
 #include <stdint.h>
-#include <mem/paging32.hpp>
+#include <sys/std.hpp>
+#include <mem/pm.hpp>
+#include <mem/pmpae.hpp>
 #include <sys/debug.hpp>
-
-static pm32::Pagedir m_mainPagedir alignas(0x1000);
+#include <sys/types.h>
 
 extern "C" void loader_main(void) {
-    m_mainPagedir.map(0, 0, pm32::PD_PS);
-    m_mainPagedir.apply();
-    pm32::enable(pm32::PM_ENABLE | pm32::PM_PSE);
+    // Map loader here
+    pm::setAlloc(0x100000); // Because pdpt
+    pm::pae::Pdpt *pdp = new (0x100000) pm::pae::Pdpt;
+    pdp->map(0x00000000, 0x00000000, 1 << 7);
+    pdp->map(0x00200000, 0x00200000, 1 << 7);
+
+    pdp->apply();
+    pae_enable();
+    pm_enable();
 
     while (1) {
         __asm__ __volatile__ ("cli; hlt");

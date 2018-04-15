@@ -50,6 +50,17 @@ void debug::vprintf(const char *fmt, va_list args) {
                         v32 = va_arg(args, uint32_t);
                         puts(itoa::itoa<10>(buf, v32));
                         break;
+                    case 'A':
+                        puts("0x");
+                        [[fallthrough]];
+                    case 'X':
+                        v64 = va_arg(args, uint64_t);
+                        puts(itoa::itoa<16>(buf, v64));
+                        break;
+                    case 's':
+                        v32 = va_arg(args, uint32_t);
+                        puts(reinterpret_cast<const char *>(v32));
+                        break;
                     default:
                         out.putc('%');
                         out.putc(c);

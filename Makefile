@@ -1,4 +1,4 @@
-LOADER_SOURCES_S=src/loader/mem/paging32_s.s
+LOADER_SOURCES_S=src/loader/mem/pm_s.s src/loader/mem/pmpae_s.s
 LOADER_SOURCES_CXX=$(shell find src/loader -name *.cpp -type f)
 LOADER_OBJECTS=$(LOADER_SOURCES_S:src/loader/%.s=build/loader/%.o) $(LOADER_SOURCES_CXX:src/loader/%.cpp=build/loader/%.o)
 LOADER_HEADERS=$(shell find src/loader -name *.hpp -type f)

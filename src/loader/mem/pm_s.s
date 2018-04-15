@@ -1,16 +1,16 @@
 .section .text
 
-.global pm32_enable
+.global pm_enable
 .align 16
-pm32_enable:
+pm_enable:
     movl %cr0, %eax
     orl $0x80000000, %eax
     movl %eax, %cr0
     ret
 
-.global pm32_disable
+.global pm_disable
 .align 16
-pm32_disable:
+pm_disable:
     movl %cr0, %eax
     andl $~0x80000000, %eax
     movl %eax, %cr0
@@ -32,9 +32,9 @@ pse_disable:
     movl %eax, %cr4
     ret
 
-.global pm32_load
+.global pm_load
 .align 16
-pm32_load:
+pm_load:
     movl 4(%esp), %eax
     movl %eax, %cr3
     ret
