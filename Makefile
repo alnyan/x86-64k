@@ -3,6 +3,9 @@ LOADER_SOURCES_CXX=$(shell find src/loader -name *.cpp -type f)
 LOADER_OBJECTS=$(LOADER_SOURCES_S:src/loader/%.s=build/loader/%.o) $(LOADER_SOURCES_CXX:src/loader/%.cpp=build/loader/%.o)
 LOADER_HEADERS=$(shell find src/loader -name *.hpp -type f)
 
+KERNEL_SOURCES_CXX=$(shell find src/kernel -name *.cpp -type f)
+KERNEL_OBJECTS=$(KERNEL_SOURCES_CXX:src/kernel/%.cpp=build/kernel/%.o)
+
 LOADER_CXXFLAGS=-ffreestanding \
 			    -ggdb \
 				-Isrc/loader \
@@ -41,18 +44,22 @@ KERNEL_CXXFLAGS=-ffreestanding \
 				-Wno-unused-parameter \
 				-Wimplicit-fallthrough \
 				-std=c++1z \
-				-mcmodel=large \
+				-mcmodel=medium \
 				-mno-red-zone \
+				-static \
 				-mno-mmx \
 				-mno-sse \
 				-mno-sse2 \
 				-z max-page-size=0x1000
+
+KERNEL_ASFLAGS=--64
 
 KERNEL_LDFLAGS=-nostdlib \
 			   -O0 \
 			   -ggdb \
 			   -Tkernel.lds \
 			   -ffreestanding \
+			   -mcmodel=medium \
 			   -z max-page-size=0x1000
 
 LD32=$(TOOLCHAIN32)/bin/$(TARGET32)-g++
@@ -67,8 +74,8 @@ LOADER_CRTBEGIN=$(shell $(CXX32) -print-file-name=crtbegin.o)
 LOADER_CRTEND=$(shell $(CXX32) -print-file-name=crtend.o)
 LOADER_LIBGCC=$(shell $(CXX32) --print-libgcc-file-name)
 
-KERNEL_SOURCES_CXX=$(shell find src/kernel -name *.cpp -type f)
-KERNEL_OBJECTS=$(KERNEL_SOURCES_CXX:src/kernel/%.cpp=build/kernel/%.o)
+KERNEL_CRTBEGIN=$(shell $(CXX64) -print-file-name=crtbegin.o)
+KERNEL_CRTEND=$(shell $(CXX64) -print-file-name=crtend.o)
 
 DIRS=build/iso/boot/grub build/loader/boot $(shell dirname $(LOADER_OBJECTS)) $(shell dirname $(KERNEL_OBJECTS))
 
@@ -87,14 +94,22 @@ build/loader.elf: mkdirs build/loader/boot/multiboot.o build/loader/crti.o build
 		$(LOADER_CRTEND) \
 		build/loader/crtn.o
 
-build/kernel.elf: mkdirs $(KERNEL_OBJECTS)
-	$(LD64) -o $@ $(KERNEL_LDFLAGS) $(KERNEL_OBJECTS)
+build/kernel.elf: mkdirs build/kernel/crti.o build/kernel/crtn.o $(KERNEL_OBJECTS)
+	$(LD64) -o $@ $(KERNEL_LDFLAGS) \
+		build/kernel/crti.o \
+		$(KERNEL_CRTBEGIN) \
+		$(KERNEL_OBJECTS) \
+		$(KERNEL_CRTEND) \
+		build/kernel/crtn.o
 
 build/loader/%.o: src/loader/%.s
 	$(AS32) -o $@ $(LOADER_ASFLAGS) $<
 
 build/loader/%.o: src/loader/%.cpp $(LOADER_HEADERS)
 	$(CXX32) -c -o $@ $(LOADER_CXXFLAGS) $<
+
+build/kernel/%.o: src/kernel/%.s
+	$(AS64) -o $@ $(KERNEL_ASFLAGS) $<
 
 build/kernel/%.o: src/kernel/%.cpp $(KERNEL_HEADERS)
 	$(CXX64) -c -o $@ $(KERNEL_CXXFLAGS) $<

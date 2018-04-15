@@ -69,6 +69,9 @@ void load_elf(uintptr_t mod_start, size_t mod_size) {
     pml->apply();
 
     debug::printf("Entry: %A\n", entry64);
+    // Prepare loader info struct for kernel
+    loader_data.loaderMagic = LOADER_MAGIC;
+
     long_enter(entry64);
 }
 
