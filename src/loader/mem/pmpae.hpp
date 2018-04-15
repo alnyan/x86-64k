@@ -20,6 +20,7 @@ public:
     void apply();
 
     void map(AddressType vaddr, AddressType paddr, EntryFlagType flags);
+    void unmap(AddressType vaddr);
     AddressType operator [](AddressType vaddr) const;
 
 private:

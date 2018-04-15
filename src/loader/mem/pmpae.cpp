@@ -30,3 +30,13 @@ void pm::pae::Pdpt::map(pm::pae::AddressType vaddr, pm::pae::AddressType paddr, 
         m_entries[pdpti] = reinterpret_cast<PagedirEntry>(pd) | 1;
     }
 }
+
+void pm::pae::Pdpt::unmap(pm::pae::AddressType vaddr) {
+    debug::printf("pm::pae::unmap %A\n", vaddr);
+    uint32_t pdpti = vaddr >> 34;
+    uint32_t pdi = (vaddr >> 21) & 0x1FF;
+    if (m_entries[pdpti] & 1) {
+        PagedirType pd = reinterpret_cast<PagedirType>(m_entries[pdpti] & 0xFFFFF000);
+        pd[pdi] = 0;
+    }
+}

@@ -1,4 +1,4 @@
 
-extern "C" void kernel_main(void) {
+extern "C" void kernel_entry(void) {
 
 }

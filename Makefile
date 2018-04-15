@@ -27,12 +27,33 @@ LOADER_LDFLAGS=-nostdlib \
 			   -Tloader.lds \
 			   -ffreestanding
 
-KERNEL_CXXFLAGS=$(LOADER_CXXFLAGS)
+KERNEL_CXXFLAGS=-ffreestanding \
+				-ggdb \
+				-Isrc/kernel \
+				-fno-rtti \
+				-fno-exceptions \
+				-Wall \
+				-Wextra \
+				-Werror \
+				-Wold-style-cast \
+				-Wno-unused-variable \
+				-Wno-unused-but-set-variable \
+				-Wno-unused-parameter \
+				-Wimplicit-fallthrough \
+				-std=c++1z \
+				-mcmodel=large \
+				-mno-red-zone \
+				-mno-mmx \
+				-mno-sse \
+				-mno-sse2 \
+				-z max-page-size=0x1000
+
 KERNEL_LDFLAGS=-nostdlib \
 			   -O0 \
 			   -ggdb \
 			   -Tkernel.lds \
-			   -ffreestanding
+			   -ffreestanding \
+			   -z max-page-size=0x1000
 
 LD32=$(TOOLCHAIN32)/bin/$(TARGET32)-g++
 AS32=$(TOOLCHAIN32)/bin/$(TARGET32)-as
@@ -80,6 +101,7 @@ build/kernel/%.o: src/kernel/%.cpp $(KERNEL_HEADERS)
 
 build/image.iso: build/loader.elf build/kernel.elf src/grub/grub.cfg
 	cp build/loader.elf build/iso/boot/loader.elf
+	cp build/kernel.elf build/iso/boot/kernel.elf
 	cp src/grub/grub.cfg build/iso/boot/grub/grub.cfg
 	grub-mkrescue -o $@ build/iso
 

@@ -10,3 +10,15 @@ bool elf::Elf64::isValid() const {
 int elf::Elf64::target() const {
     return m_ehdr.e_ident[EI_CLASS];
 }
+
+const char *elf::Elf64::string(int offset) const {
+    const char *strtab = strTable();
+    if (!strtab) {
+        return nullptr;
+    }
+    return strtab + offset;
+}
+
+size_t elf::Elf64::sectionCount() const {
+    return static_cast<size_t>(m_ehdr.e_shnum);
+}
