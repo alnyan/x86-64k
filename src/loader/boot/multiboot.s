@@ -1,16 +1,15 @@
-.set MULTIBOOT2_MAGIC,      0xE85250D6
-.set MULTIBOOT2_FLAGS,      0x00000000
-.set MULTIBOOT2_LENGTH,     0x00000010
-.set MULTIBOOT2_CHECKSUM,   -(MULTIBOOT2_FLAGS + MULTIBOOT2_LENGTH + MULTIBOOT2_MAGIC)
+.set MB_ALIGN_MODS, 1 << 0
+.set MB_MEMINFO,    1 << 1
+.set MB_FLAGS,      MB_ALIGN_MODS | MB_MEMINFO
+.set MB_MAGIC,      0x1BADB002
+.set MB_CHECKSUM,   -(MB_MAGIC + MB_FLAGS)
 
 .section .multiboot
 
-.long MULTIBOOT2_MAGIC
-.long MULTIBOOT2_FLAGS
-.long MULTIBOOT2_LENGTH
-.long MULTIBOOT2_CHECKSUM
-.long 0x00000000
-.long 0x00000008
+.align 16
+.long MB_MAGIC
+.long MB_FLAGS
+.long MB_CHECKSUM
 
 .section .text
 
@@ -20,7 +19,7 @@ multiboot_entry:
     movl %ebx, mb_info_ptr
     movl $stack_top, %esp
 
-    lgdt (gdtr32)
+    //lgdt (gdtr32)
 
     call _init
     call loader_main

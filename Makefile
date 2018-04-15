@@ -27,15 +27,29 @@ LOADER_LDFLAGS=-nostdlib \
 			   -Tloader.lds \
 			   -ffreestanding
 
+KERNEL_CXXFLAGS=$(LOADER_CXXFLAGS)
+KERNEL_LDFLAGS=-nostdlib \
+			   -O0 \
+			   -ggdb \
+			   -Tkernel.lds \
+			   -ffreestanding
+
 LD32=$(TOOLCHAIN32)/bin/$(TARGET32)-g++
 AS32=$(TOOLCHAIN32)/bin/$(TARGET32)-as
 CXX32=$(TOOLCHAIN32)/bin/$(TARGET32)-g++
+
+LD64=$(TOOLCHAIN64)/bin/$(TARGET64)-g++
+AS64=$(TOOLCHAIN64)/bin/$(TARGET64)-as
+CXX64=$(TOOLCHAIN64)/bin/$(TARGET64)-g++
 
 LOADER_CRTBEGIN=$(shell $(CXX32) -print-file-name=crtbegin.o)
 LOADER_CRTEND=$(shell $(CXX32) -print-file-name=crtend.o)
 LOADER_LIBGCC=$(shell $(CXX32) --print-libgcc-file-name)
 
-DIRS=build/iso/boot/grub $(shell dirname $(LOADER_OBJECTS))
+KERNEL_SOURCES_CXX=$(shell find src/kernel -name *.cpp -type f)
+KERNEL_OBJECTS=$(KERNEL_SOURCES_CXX:src/kernel/%.cpp=build/kernel/%.o)
+
+DIRS=build/iso/boot/grub build/loader/boot $(shell dirname $(LOADER_OBJECTS)) $(shell dirname $(KERNEL_OBJECTS))
 
 all: build/image.iso
 
@@ -52,13 +66,19 @@ build/loader.elf: mkdirs build/loader/boot/multiboot.o build/loader/crti.o build
 		$(LOADER_CRTEND) \
 		build/loader/crtn.o
 
+build/kernel.elf: mkdirs $(KERNEL_OBJECTS)
+	$(LD64) -o $@ $(KERNEL_LDFLAGS) $(KERNEL_OBJECTS)
+
 build/loader/%.o: src/loader/%.s
 	$(AS32) -o $@ $(LOADER_ASFLAGS) $<
 
 build/loader/%.o: src/loader/%.cpp $(LOADER_HEADERS)
 	$(CXX32) -c -o $@ $(LOADER_CXXFLAGS) $<
 
-build/image.iso: build/loader.elf src/grub/grub.cfg
+build/kernel/%.o: src/kernel/%.cpp $(KERNEL_HEADERS)
+	$(CXX64) -c -o $@ $(KERNEL_CXXFLAGS) $<
+
+build/image.iso: build/loader.elf build/kernel.elf src/grub/grub.cfg
 	cp build/loader.elf build/iso/boot/loader.elf
 	cp src/grub/grub.cfg build/iso/boot/grub/grub.cfg
 	grub-mkrescue -o $@ build/iso

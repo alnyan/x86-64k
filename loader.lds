@@ -1,17 +1,17 @@
 ENTRY(multiboot_entry)
 SECTIONS {
     . = 0x200000;
-  
-	.init : {
-		*(.init)
-	}
 
     .text BLOCK(4K) : ALIGN(4K)
 	{
 		*(.multiboot)
 		*(.text)
 	}
-
+  
+	.init : {
+		*(.init)
+	}
+	
 	.rodata BLOCK(4K) : ALIGN(4K)
 	{
 		*(.rodata)
