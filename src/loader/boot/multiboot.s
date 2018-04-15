@@ -17,9 +17,20 @@
 .align 16
 multiboot_entry:
     movl %ebx, mb_info_ptr
-    movl $stack_top, %esp
 
-    //lgdt (gdtr32)
+    lgdt (gdtr32)
+
+    ljmp $0x08, $.gdt32_loaded
+
+.gdt32_loaded:
+    movw $0x10, %ax
+    movw %ax, %ds
+    movw %ax, %es
+    movw %ax, %fs
+    movw %ax, %gs
+    movw %ax, %ss
+
+    movl $stack_top, %esp
 
     call _init
     call loader_main
@@ -30,8 +41,8 @@ gdt32:
     .quad 0x00CF9A000000FFFF
     .quad 0x00CF92000000FFFF
 gdtr32:
-    .long gdt32
     .word (gdtr32 - gdt32 - 1)
+    .long gdt32
 
 .global mb_info_ptr
 .align 4
