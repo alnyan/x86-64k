@@ -7,8 +7,13 @@
 #include <boot/multiboot.h>
 #include <sys/elf.hpp>
 #include <algo/memory.hpp>
+#include <mem/pm64.hpp>
+#include "loader.hpp"
 
 extern "C" struct multiboot_info *mb_info_ptr;
+extern "C" [[noreturn]] void long_enter(uint64_t);
+
+LoaderData loader_data;
 
 static constexpr uintptr_t m_loadAddr = 0x400000; // Real address at which kernel will be loaded
 pm::pae::Pdpt *pdp;
@@ -18,55 +23,53 @@ void load_elf(uintptr_t mod_start, size_t mod_size) {
     assert(elf->isValid());
     assert(elf->target() == ELFCLASS64);
 
-    size_t ns = elf->sectionCount();
+    size_t ns = elf->programCount();
     debug::printf("Elf: %a\n", elf);
     debug::printf("Section count: %d\n", ns);
 
-    const Elf64_Shdr *shdrs = elf->sectionHeaders();
-    uint64_t lowest = 0xFFFFFFFFFFFFFFFF;
+    const Elf64_Phdr *phdrs = elf->programHeaders();
 
-    for (size_t i = 0; i < ns; ++i) {
-        const Elf64_Shdr *section = elf->section(i);
-
-        if (const char *name = elf->string(section->sh_name); name) {
-            debug::printf("  Section: \"%s\"\n", name);
-        }
-
-        if (section->sh_flags & SHF_ALLOC) {
-            if (section->sh_addr < lowest) {
-                lowest = section->sh_addr;
-            }
-            debug::printf("    (Will be loaded at virt = %A)\n", section->sh_addr);
-        }
-    }
-
-    assert(!(lowest & 0x7FFFF));
-
-    debug::printf("Lowest virtual address: %A will be mapped to %a\n", lowest, m_loadAddr);
+    // TODO: make sure entry is 2MB-page-aligned
+    uint64_t entry64 = elf->entry();
 
     // TODO: map more pages
     pdp->map(0x00400000, 0x00400000, 1 << 7);
-    
-    for (size_t i = 0; i < ns; ++i) {
-        const Elf64_Shdr *section = elf->section(i);
+    pdp->apply();
 
-        if (section->sh_flags & SHF_ALLOC) {
-            uint64_t off64 = section->sh_addr - lowest;
-            uint32_t off32 = static_cast<uint32_t>(off64);
-            uint64_t shoff64 = section->sh_offset;
-            uint32_t shoff32 = static_cast<uint32_t>(shoff64);
-            uint64_t size64 = section->sh_size;
+    for (size_t i = 0; i < ns; ++i) {
+        const Elf64_Phdr *programHeader = elf->programHeader(i);
+
+        if (programHeader->p_type == PT_LOAD) {
+            uint64_t paddr64 = programHeader->p_paddr;
+            uint64_t vaddr64 = programHeader->p_vaddr;
+            uint32_t paddr32 = static_cast<uint32_t>(paddr64);
+            uint32_t vaddr32 = static_cast<uint32_t>(vaddr64);
+            uint64_t size64 = programHeader->p_filesz;
             uint32_t size32 = static_cast<uint32_t>(size64);
 
-            debug::printf("  Loading section %A, offset %a (%a in file), to addr %a, size %a\n", section->sh_addr, off32, shoff32, m_loadAddr + off32, size32);
+            uint64_t off64 = programHeader->p_offset;
+            uint32_t off32 = static_cast<uint32_t>(off64);
 
-            const void *fileAddr = reinterpret_cast<const void *>(shoff32 + reinterpret_cast<uintptr_t>(&elf));
+            const void *l = reinterpret_cast<const void *>(mod_start + off32);
 
-            memcpy(reinterpret_cast<void *>(m_loadAddr + off32), fileAddr, size32);
+            debug::printf("paddr32 = %a\n", paddr32);
+
+            memcpy(reinterpret_cast<void *>(paddr32), l, size32);//FIXME:!
         }
     }
-
     pdp->unmap(0x00400000);
+
+    // Convert pdp to pml4
+    pm_disable();
+
+    pm::pm64::Pml4 *pml = new (0x100000) pm::pm64::Pml4;
+    pml->map(0x0, 0x0, 1 << 7);
+    pml->map(0x200000, 0x200000, 1 << 7);
+    pml->map(entry64, 0x400000, 1 << 7); // TODO: map more pages if needed
+    pml->apply();
+
+    debug::printf("Entry: %A\n", entry64);
+    long_enter(entry64);
 }
 
 extern "C" void loader_main(void) {

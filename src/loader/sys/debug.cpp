@@ -74,3 +74,10 @@ void debug::vprintf(const char *fmt, va_list args) {
         ++fmt;
     }
 }
+
+void debug::dump(const void *buf, size_t lim) {
+    const char *cs = reinterpret_cast<const char *>(buf);
+    for (size_t b = 0; b < lim; ++b) {
+        debug::printf("+%d: %a (%d)\n", b, cs[b], cs[b]);
+    }
+}

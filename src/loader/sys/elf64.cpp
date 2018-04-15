@@ -22,3 +22,11 @@ const char *elf::Elf64::string(int offset) const {
 size_t elf::Elf64::sectionCount() const {
     return static_cast<size_t>(m_ehdr.e_shnum);
 }
+
+size_t elf::Elf64::programCount() const {
+    return static_cast<size_t>(m_ehdr.e_phnum);
+}
+
+Elf64_Addr elf::Elf64::entry() const {
+    return m_ehdr.e_entry;
+}

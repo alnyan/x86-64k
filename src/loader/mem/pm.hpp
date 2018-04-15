@@ -5,6 +5,7 @@
 
 extern "C" {
     void pse_enable();
+    void pm_disable();
     void pm_enable();
     void pm_load(uintptr_t paddr);
 }

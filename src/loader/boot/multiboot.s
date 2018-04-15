@@ -1,3 +1,4 @@
+.code32
 .set MB_ALIGN_MODS, 1 << 0
 .set MB_MEMINFO,    1 << 1
 .set MB_FLAGS,      MB_ALIGN_MODS | MB_MEMINFO
@@ -16,10 +17,11 @@
 .global multiboot_entry
 .align 16
 multiboot_entry:
+    cli
+
     movl %ebx, mb_info_ptr
 
     lgdt (gdtr32)
-
     ljmp $0x08, $.gdt32_loaded
 
 .gdt32_loaded:
@@ -31,10 +33,55 @@ multiboot_entry:
     movw %ax, %ss
 
     movl $stack_top, %esp
+    movl $stack_top, %ebp
 
     call _init
     call loader_main
 
+.global long_enter
+.align 16
+long_enter:
+    cli
+    movl $entry_store, %esi
+
+    movl 8(%esp), %eax
+    movl %eax, 4(%esi)
+
+    movl 4(%esp), %eax
+    movl %eax, (%esi)
+
+    movl %cr0, %eax
+    andl $~0x80000000, %eax
+    movl %eax, %cr0
+
+    movl $0xC0000080, %ecx
+    rdmsr
+    orl $(1 << 8), %eax
+    movl $0xC0000080, %ecx
+    wrmsr
+
+    movl %cr0, %eax
+    orl $0x80000000, %eax
+    movl %eax, %cr0
+    
+    lgdt (gdtr64)
+
+    ljmp $0x08, $.long_cont
+.long_cont:
+    movw $0x10, %ax
+    movw %ax, %ds
+    movw %ax, %es
+    movw %ax, %fs
+    movw %ax, %gs
+    movw %ax, %ss
+
+    movl $entry_store, %esi
+    movl $loader_data, %edi // Will be passed to kernel
+.code64
+    movq (%rsi), %rax
+    jmp *%rax
+
+.code32
 .align 16
 gdt32:
     .quad 0x0000000000000000
@@ -43,11 +90,24 @@ gdt32:
 gdtr32:
     .word (gdtr32 - gdt32 - 1)
     .long gdt32
+.align 16
+gdt64:
+	.quad 0x0000000000000000
+	.quad 0x00209A0000000000
+	.quad 0x0020920000000000
+gdtr64:
+	.word (gdtr64 - gdt64 - 1)
+	.long gdt64
+
 
 .global mb_info_ptr
 .align 4
 mb_info_ptr:
     .long 0
+
+.align 8
+entry_store:
+    .quad 0
 
 .section .bss
 .align 16

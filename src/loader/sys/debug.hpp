@@ -2,6 +2,7 @@
 #include <stdint.h> 
 #include <sys/std.hpp>
 #include <stdarg.h>
+#include <sys/types.h>
 
 #define assert_stringify(x) #x
 #define assert_stringify2(x) assert_stringify(x)
@@ -24,6 +25,8 @@ namespace debug {
     void puts(const char *s);
     void printf(const char *msg, ...);
     void vprintf(const char *msg, va_list args);
+
+    void dump(const void *buf, size_t lim);
 
     [[noreturn]] void assertFail(const char *file, int line, const char *msg);
 
