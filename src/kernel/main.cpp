@@ -1,6 +1,7 @@
 #include "../loader/loader.hpp"
 #include <sys/types.h>
 #include <sys/debug.hpp>
+#include <algo/string.hpp>
 
 void validateLoaderData(LoaderData *data) {
     uint32_t sum = 0;

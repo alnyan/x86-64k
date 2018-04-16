@@ -15,6 +15,21 @@ void debug::puts(const char *s) {
     }
 }
 
+void debug::print(const str &s) {
+    size_t l = s.length();
+    for (size_t i = 0; i < l; ++i) {
+        out.putc(s[i]);
+    }
+}
+
+void debug::println(const str &s) {
+    size_t l = s.length();
+    for (size_t i = 0; i < l; ++i) {
+        out.putc(s[i]);
+    }
+    out.putc('\n');
+}
+
 void debug::printf(const char *fmt, ...) {
     va_list args;
     va_start(args, fmt);

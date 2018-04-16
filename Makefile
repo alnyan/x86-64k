@@ -6,6 +6,7 @@ LOADER_HEADERS=$(shell find src/loader -name *.hpp -type f)
 KERNEL_ALL_SOURCES_S=$(shell find src/kernel -name *.s -type f)
 KERNEL_SOURCES_S=$(filter-out src/kernel/crti.s src/kernel/crtn.s,$(KERNEL_ALL_SOURCES_S))
 KERNEL_SOURCES_CXX=$(shell find src/kernel -name *.cpp -type f)
+KERNEL_HEADERS=$(shell find src/kernel -name *.hpp -type f)
 KERNEL_OBJECTS=$(KERNEL_SOURCES_S:src/kernel/%.s=build/kernel/%.o) $(KERNEL_SOURCES_CXX:src/kernel/%.cpp=build/kernel/%.o)
 
 LOADER_CXXFLAGS=-ffreestanding \

@@ -3,6 +3,7 @@
 #include <stdarg.h>
 #include <sys/types.h>
 #include <dev/rs232.hpp>
+#include <algo/string.hpp>
 
 #define assert_stringify(x) #x
 #define assert_stringify2(x) assert_stringify(x)
@@ -13,6 +14,8 @@ namespace debug {
     extern devices::rs232::SerialPort out;
 
     void puts(const char *s);
+    void print(const str &s);
+    void println(const str &s);
     void printf(const char *msg, ...);
     void vprintf(const char *msg, va_list args);
 
