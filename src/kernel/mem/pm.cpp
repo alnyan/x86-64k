@@ -75,6 +75,6 @@ void pm::retainLoaderPaging(const LoaderData *loaderData) {
     }
 
     // 4. dump allocation map
-    m_pagingStructureRange.end = trackingAddr;
+    m_pagingStructureRange.end = trackingAddr & ~0xFFF;
     dumpAlloc();
 }
