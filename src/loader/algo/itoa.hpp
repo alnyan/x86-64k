@@ -10,7 +10,7 @@ namespace itoa {
     constexpr char chars[] = "0123456789abcdef";
 
     template<size_t base, bool u = false> char *itoa(char *buf, ValueType val) {
-        static_assert(base != 0 && base <= 64);
+        static_assert(base != 0 && base <= 16);
         if (!val) {
             buf[0] = '0';
             buf[1] = 0;
