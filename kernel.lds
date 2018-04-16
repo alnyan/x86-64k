@@ -1,22 +1,22 @@
 ENTRY(kernel_entry)
 SECTIONS {
-    . = 0x4FF000000000;
+    . = 0x400000;
 
-    .text BLOCK(4K) : AT(ADDR(.text) - 0x4FF000000000 + 0x400000)
+    .text :
 	{
 		*(.text)
 	}
-	.rodata ALIGN(4K) : AT(ADDR(.rodata) - 0x4FF000000000 + 0x400000)
+	.rodata ALIGN(4K) :
 	{
 		*(.rodata)
 	}
 
-	.data ALIGN(4K) : AT(ADDR(.data) - 0x4FF000000000 + 0x400000)
+	.data ALIGN(4K) :
 	{
 		*(.data)
 	}
 
-	.bss ALIGN(4K) : AT(ADDR(.bss) - 0x4FF000000000 + 0x400000)
+	.bss ALIGN(4K) :
 	{
 		*(COMMON)
 		*(.bss)

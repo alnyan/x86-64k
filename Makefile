@@ -3,8 +3,10 @@ LOADER_SOURCES_CXX=$(shell find src/loader -name *.cpp -type f)
 LOADER_OBJECTS=$(LOADER_SOURCES_S:src/loader/%.s=build/loader/%.o) $(LOADER_SOURCES_CXX:src/loader/%.cpp=build/loader/%.o)
 LOADER_HEADERS=$(shell find src/loader -name *.hpp -type f)
 
+KERNEL_ALL_SOURCES_S=$(shell find src/kernel -name *.s -type f)
+KERNEL_SOURCES_S=$(filter-out src/kernel/crti.s src/kernel/crtn.s,$(KERNEL_ALL_SOURCES_S))
 KERNEL_SOURCES_CXX=$(shell find src/kernel -name *.cpp -type f)
-KERNEL_OBJECTS=$(KERNEL_SOURCES_CXX:src/kernel/%.cpp=build/kernel/%.o)
+KERNEL_OBJECTS=$(KERNEL_SOURCES_S:src/kernel/%.s=build/kernel/%.o) $(KERNEL_SOURCES_CXX:src/kernel/%.cpp=build/kernel/%.o)
 
 LOADER_CXXFLAGS=-ffreestanding \
 			    -ggdb \
@@ -44,7 +46,7 @@ KERNEL_CXXFLAGS=-ffreestanding \
 				-Wno-unused-parameter \
 				-Wimplicit-fallthrough \
 				-std=c++1z \
-				-mcmodel=medium \
+				-mcmodel=kernel \
 				-mno-red-zone \
 				-static \
 				-mno-mmx \
@@ -59,7 +61,7 @@ KERNEL_LDFLAGS=-nostdlib \
 			   -ggdb \
 			   -Tkernel.lds \
 			   -ffreestanding \
-			   -mcmodel=medium \
+			   -mcmodel=kernel \
 			   -z max-page-size=0x1000
 
 LD32=$(TOOLCHAIN32)/bin/$(TARGET32)-g++

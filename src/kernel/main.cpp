@@ -1,6 +1,6 @@
 #include "../loader/loader.hpp"
 
-extern "C" void kernel_entry(LoaderData *loaderData) {
+extern "C" void kernel_main(LoaderData *loaderData) {
     while (true) {
 
     }
