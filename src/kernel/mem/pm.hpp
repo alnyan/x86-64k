@@ -12,6 +12,7 @@ namespace pm {
     using Pml4Entry = uint64_t;
 
     using TrackingFieldType = uint64_t;
+    using RefcountType = uint16_t;
 
     class Pml4 {
     public:
@@ -28,6 +29,9 @@ namespace pm {
     void free(void *ptr);
     void *alloc();
     void setAlloc(uintptr_t addr);
+
+    RefcountType incRefs(uintptr_t addr);
+    RefcountType decRefs(uintptr_t addr);
 
     void retainLoaderPaging(const LoaderData *loaderData);
 

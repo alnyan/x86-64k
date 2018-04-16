@@ -1,5 +1,6 @@
 #include "pm.hpp"
 #include <sys/types.h>
+#include <algo/memory.hpp>
 
 uintptr_t pm::vaddr;
 
@@ -29,6 +30,7 @@ uintptr_t pm::alloc() {
     for (uintptr_t addr = paging_region.start; addr < paging_region.end; addr += 0x1000) {
         if (isFree(addr)) {        
             setAlloc(addr);
+            memset(reinterpret_cast<void *>(addr), 0, 0x1000);
             debug::printf(" = %a\n", addr);
             return addr;
         }
