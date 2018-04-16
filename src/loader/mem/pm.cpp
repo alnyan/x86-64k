@@ -13,8 +13,8 @@ bool pm::isFree(uintptr_t addr) {
     assert(paging_region.contains(addr));
     assert(!(addr & 0xFFF));
     
-    size_t idx = addr >> 17;
-    size_t bit = 1 << ((addr >> 12) & 0x1F);
+    size_t idx = (addr - paging_region.start) >> 17;
+    size_t bit = 1 << (((addr - paging_region.start) >> 12) & 0x1F);
 
     if (!(m_dataTracker[idx] & bit)) {
         return true;
@@ -38,8 +38,8 @@ uintptr_t pm::alloc() {
 }
 
 void pm::setAlloc(uintptr_t addr) {
-    size_t idx = addr >> 17;
-    size_t bit = 1 << ((addr >> 12) & 0x1F);
+    size_t idx = (addr - paging_region.start) >> 17;
+    size_t bit = 1 << (((addr - paging_region.start) >> 12) & 0x1F);
 
     m_dataTracker[idx] |= bit;
 }
