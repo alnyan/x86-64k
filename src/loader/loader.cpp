@@ -86,7 +86,7 @@ void load_elf(uintptr_t loadAddr, uintptr_t mod_start, size_t mod_size) {
     loader_data.checksum = 0;
     uint32_t sum = 0;
     for (size_t off = 0; off < sizeof(LoaderData); ++off) {
-        sum += reinterpret_cast<char *>(&loader_data)[off];
+        sum += reinterpret_cast<const uint8_t *>(&loader_data)[off];
     }
     sum &= 0xFF;
     loader_data.checksum = -sum;
