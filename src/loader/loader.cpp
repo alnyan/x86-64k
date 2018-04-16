@@ -10,6 +10,7 @@
 #include <mem/pm64.hpp>
 #include "loader.hpp"
 
+// FIXME: calculate better physical loading address: may overlap loaded modules
 extern "C" struct multiboot_info *mb_info_ptr;
 extern "C" [[noreturn]] void long_enter(uint64_t);
 
@@ -70,7 +71,19 @@ void load_elf(uintptr_t mod_start, size_t mod_size) {
 
     debug::printf("Entry: %A\n", entry64);
     // Prepare loader info struct for kernel
+    // TODO: fix magic numbers
     loader_data.loaderMagic = LOADER_MAGIC;
+    loader_data.loaderPagingBase = 0x100000;
+    loader_data.loaderPagingSize = 0x100000;
+    loader_data.loaderPagingTracking = reinterpret_cast<uint32_t>(pm::trackingPtr());
+    loader_data.multibootInfo = reinterpret_cast<uint32_t>(mb_info_ptr);
+    loader_data.checksum = 0;
+    uint32_t sum = 0;
+    for (size_t off = 0; off < sizeof(LoaderData); ++off) {
+        sum += reinterpret_cast<char *>(&loader_data)[off];
+    }
+    sum &= 0xFF;
+    loader_data.checksum = -sum;
 
     long_enter(entry64);
 }

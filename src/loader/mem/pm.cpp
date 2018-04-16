@@ -5,6 +5,10 @@ uintptr_t pm::vaddr;
 
 static uint32_t m_dataTracker[(0x200000 - 0x100000) >> 17]; // FIXME: magic numbers
 
+void *pm::trackingPtr() {
+    return m_dataTracker;
+}
+
 bool pm::isFree(uintptr_t addr) {
     assert(paging_region.contains(addr));
     assert(!(addr & 0xFFF));

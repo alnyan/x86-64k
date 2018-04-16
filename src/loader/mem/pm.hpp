@@ -29,6 +29,7 @@ namespace pm {
     bool isFree(uintptr_t addr);
     void setAlloc(uintptr_t addr);
 
+    void *trackingPtr();
     uintptr_t alloc(); // Allocates 0x1000-sized region for paging structures
 
 }
