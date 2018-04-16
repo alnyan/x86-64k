@@ -8,9 +8,9 @@
 #include <sys/elf.hpp>
 #include <algo/memory.hpp>
 #include <mem/pm64.hpp>
+#include <sys/panic.hpp>
 #include "loader.hpp"
 
-// FIXME: calculate better physical loading address: may overlap loaded modules
 extern "C" struct multiboot_info *mb_info_ptr;
 extern "C" [[noreturn]] void long_enter(uint64_t);
 
@@ -19,7 +19,7 @@ LoaderData loader_data;
 static constexpr uintptr_t m_loadAddr = 0x400000; // Real address at which kernel will be loaded
 pm::pae::Pdpt *pdp;
 
-void load_elf(uintptr_t mod_start, size_t mod_size) {
+void load_elf(uintptr_t loadAddr, uintptr_t mod_start, size_t mod_size) {
     elf::Elf64 *elf = reinterpret_cast<elf::Elf64 *>(mod_start);
     assert(elf->isValid());
     assert(elf->target() == ELFCLASS64);
@@ -32,10 +32,6 @@ void load_elf(uintptr_t mod_start, size_t mod_size) {
 
     // TODO: make sure entry is 2MB-page-aligned
     uint64_t entry64 = elf->entry();
-
-    // TODO: map more pages
-    pdp->map(0x00400000, 0x00400000, 1 << 7);
-    pdp->apply();
 
     for (size_t i = 0; i < ns; ++i) {
         const Elf64_Phdr *programHeader = elf->programHeader(i);
@@ -55,26 +51,36 @@ void load_elf(uintptr_t mod_start, size_t mod_size) {
 
             debug::printf("paddr32 = %a\n", paddr32);
 
-            memcpy(reinterpret_cast<void *>(paddr32), l, size32);//FIXME:!
+            uint32_t paddrPage = paddr32 & (-0x200000);
+
+            debug::printf("page-aligned: %a\n", paddrPage);
+            if (paddrPage >= loadAddr) {
+                pdp->map(0x00400000, paddrPage, 1 << 7);
+                pdp->apply();
+            } else {
+                panic_msg("Physical address is too low\n");
+            }
+
+            memcpy(reinterpret_cast<void *>(paddr32 - paddrPage + 0x400000), l, size32);
+
+            pdp->unmap(0x400000);
+            pdp->apply();
         }
     }
-    pdp->unmap(0x00400000);
-
     // Convert pdp to pml4
     pm_disable();
 
     pm::pm64::Pml4 *pml = new (0x100000) pm::pm64::Pml4;
     pml->map(0x0, 0x0, 1 << 7);
     pml->map(0x200000, 0x200000, 1 << 7);
-    pml->map(entry64, 0x400000, 1 << 7); // TODO: map more pages if needed
+    pml->map(entry64, loadAddr, 1 << 7); // TODO: map more pages if needed
     pml->apply();
 
     debug::printf("Entry: %A\n", entry64);
     // Prepare loader info struct for kernel
-    // TODO: fix magic numbers
     loader_data.loaderMagic = LOADER_MAGIC;
-    loader_data.loaderPagingBase = 0x100000;
-    loader_data.loaderPagingSize = 0x100000;
+    loader_data.loaderPagingBase = pm::paging_region.start;
+    loader_data.loaderPagingSize = pm::paging_region.length();
     loader_data.loaderPagingTracking = reinterpret_cast<uint32_t>(pm::trackingPtr());
     loader_data.multibootInfo = reinterpret_cast<uint32_t>(mb_info_ptr);
     loader_data.checksum = 0;
@@ -88,6 +94,24 @@ void load_elf(uintptr_t mod_start, size_t mod_size) {
     long_enter(entry64);
 }
 
+uint32_t calculateLoadAddr(struct multiboot_mod_list *mods, uint32_t modCount) {
+    uint32_t addr = 0x400000;
+    struct multiboot_mod_list *mod;
+    for (uint32_t i = 0; i < modCount; ++i) {
+        mod = &mods[i];
+
+        debug::printf(" * module %a - %a\n", mod->mod_start, mod->mod_end);        
+        if (mod->cmdline && strlen(reinterpret_cast<const char *>(mod->cmdline))) {
+            debug::printf(" params = %s\n", mod->cmdline);
+        }
+
+        if (mod->mod_end > addr) {
+            addr = alignUp(mod->mod_end, 0x200000u); // Align up to 2MiB boundary
+        }
+    }
+    return addr;
+}
+
 extern "C" void loader_main(void) {
     // Map loader here
     pm::setAlloc(0x100000); // Because pdpt
@@ -99,11 +123,15 @@ extern "C" void loader_main(void) {
     pae_enable();
     pm_enable();
 
-    // Find kernel
+    assert(mb_info_ptr->mods_count != 0);
+
+    // Find physical address where the kernel can be loaded
     struct multiboot_mod_list *mb_mod = reinterpret_cast<struct multiboot_mod_list *>(mb_info_ptr->mods_addr);
-    size_t mb_mod_count = mb_info_ptr->mods_count;
-    assert(mb_mod_count == 1);
-    load_elf(mb_mod->mod_start, mb_mod->mod_end - mb_mod->mod_start);
+    uint32_t availablePhysAddr = calculateLoadAddr(mb_mod, mb_info_ptr->mods_count);
+    debug::printf("Physical address to load kernel: %a\n", availablePhysAddr);
+
+    // Find kernel
+    load_elf(availablePhysAddr, mb_mod->mod_start, mb_mod->mod_end - mb_mod->mod_start);
 
     while (1) {
         __asm__ __volatile__ ("cli; hlt");

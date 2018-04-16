@@ -7,6 +7,10 @@ namespace std {
 
 }
 
+template<typename T> T alignUp(T v, T bound) {
+    return (v + (bound - 1)) & -bound;
+}
+
 template<typename T> struct range {
     T start, end;
 
