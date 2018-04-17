@@ -20,6 +20,7 @@ namespace heap {
     class Heap {
     public:
         Heap(uintptr_t base, size_t size);
+        Heap();
         ~Heap();
 
         option<void *> alloc(size_t size);
@@ -29,10 +30,17 @@ namespace heap {
         HeapHeader *rootHeader();
 
         void dump();
+        void reset(uintptr_t base, size_t size);
+
+        bool valid() const;
 
     private:
         uintptr_t m_base;
         size_t m_size;
     };
+
+    extern Heap kernelHeap;
+
+    void init();
 
 }

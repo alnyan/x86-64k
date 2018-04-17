@@ -1,5 +1,8 @@
 #include "heap.hpp"
 #include <algo/memory.hpp>
+#include <mem/mm.hpp>
+
+heap::Heap heap::kernelHeap;
 
 heap::Heap::Heap(uintptr_t base, size_t size): m_base{base}, m_size{size} {
     // Place initial header
@@ -10,16 +13,44 @@ heap::Heap::Heap(uintptr_t base, size_t size): m_base{base}, m_size{size} {
     hdr->next = 0;
 }
 
+heap::Heap::Heap(): m_base{0}, m_size{0} {
+}
+
 heap::Heap::~Heap() {
-    // Make sure no objects are allocated when heap dies
-    for (HeapHeader *hdr = rootHeader(); hdr; hdr = hdr->next) {
-        if ((hdr->flags & heap::headerMagic) != heap::headerMagic) {
-            panic_msg("Heap is broken");
-        }
-        if (hdr->flags & heap::HeapFlags::HF_ALLOC) {
-            panic_msg("Tried to destroy heap with living objects");
+    if (m_size) {
+        // Make sure no objects are allocated when heap dies
+        for (HeapHeader *hdr = rootHeader(); hdr; hdr = hdr->next) {
+            if ((hdr->flags & heap::headerMagic) != heap::headerMagic) {
+                panic_msg("Heap is broken");
+            }
+            if (hdr->flags & heap::HeapFlags::HF_ALLOC) {
+                panic_msg("Tried to destroy heap with living objects");
+            }
         }
     }
+}
+
+void heap::Heap::reset(uintptr_t base, size_t size) {
+    if (m_size) {
+        for (HeapHeader *hdr = rootHeader(); hdr; hdr = hdr->next) {
+            if ((hdr->flags & heap::headerMagic) != heap::headerMagic) {
+                panic_msg("Heap is broken");
+            }
+            if (hdr->flags & heap::HeapFlags::HF_ALLOC) {
+                panic_msg("Tried to destroy heap with living objects");
+            }
+        }
+    }
+
+    m_base = base;
+    m_size = size;
+
+    // Place initial header
+    HeapHeader *hdr = rootHeader();
+    hdr->flags = headerMagic;
+    hdr->length = size - sizeof(HeapHeader);
+    hdr->prev = 0;
+    hdr->next = 0;  
 }
 
 heap::HeapHeader *heap::Heap::rootHeader() {
@@ -114,6 +145,16 @@ void heap::Heap::dump() {
     }
 }
 
+bool heap::Heap::valid() const {
+    return m_size && m_base;
+}
+
 void *heap::Heap::allocOrPanic(size_t s) {
     return alloc(s).orPanic("Failed to allocate object on heap");
+}
+
+void heap::init() {
+    auto heapRegion = mm::alloc(pm::kernel(), 16, mm::AllocFlagsType::AF_RW).orPanic("Failed to allocate memory for kernel heap");
+    kernelHeap.reset(heapRegion, 16 * 0x200000);
+    debug::printf("Created heap at %la, size %lu\n", heapRegion, 16 * 0x200000);
 }
