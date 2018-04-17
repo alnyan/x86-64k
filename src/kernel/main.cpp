@@ -28,18 +28,26 @@ extern "C" void kernel_main(LoaderData *loaderData) {
     {
         heap::Heap h(heapRegion, 16 * 0x200000);
 
-        void *p0 = h.allocOrPanic(12);
-        void *p1 = h.allocOrPanic(23);
-        void *p2 = h.allocOrPanic(34);
+        auto p0 = h.alloc(17 * 0x200000);
+
+        if (!p0) {
+            debug::printf("We failed, as expected\n");
+        }
+
+        size_t chunkSizes[] = {
+            12, 23, 34, 45, 56, 67, 78
+        };
+        void *ptrs[sizeof(chunkSizes) / sizeof(size_t)];
+
+        for (size_t i = 0; i < sizeof(chunkSizes) / sizeof(size_t); ++i) {
+            ptrs[i] = h.allocOrPanic(chunkSizes[i]);
+        }
         h.dump();
 
-        h.free(p1);
-        h.dump();
-
-        h.free(p0);
-        h.dump();
-
-        h.free(p2);
+        for (size_t i = 0; i < sizeof(chunkSizes) / sizeof(size_t); ++i) {
+            h.free(ptrs[i]);
+        }
+        
         h.dump();
     }
 
