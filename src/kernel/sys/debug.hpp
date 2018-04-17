@@ -14,6 +14,7 @@ namespace debug {
     extern devices::rs232::SerialPort out;
 
     void puts(const char *s);
+    void puts(const char *s, char padc, size_t pad);
     void print(const str &s);
     void println(const str &s);
     void printf(const char *msg, ...);

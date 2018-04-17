@@ -15,6 +15,16 @@ void debug::puts(const char *s) {
     }
 }
 
+void debug::puts(const char *s, char c, size_t p) {
+    size_t l = strlen(s);
+    for (size_t i = l; i < p; ++i) {
+        out.putc(c);
+    }
+    for (size_t i = 0; i < l; ++i) {
+        out.putc(s[i]);
+    }
+}
+
 void debug::print(const str &s) {
     size_t l = s.length();
     for (size_t i = 0; i < l; ++i) {
@@ -42,41 +52,62 @@ void debug::vprintf(const char *fmt, va_list args) {
     char buf[itoa::bufferSize];
     uint32_t v32;
     uint64_t v64;
+    char padChar = -1;
+    size_t padCount = 0;
     while ((c = *fmt)) {
         switch (c) {
         case '%':
             c = *++fmt;
+            if (c == '0' || c == ' ') {
+                padChar = c;
+                c = *++fmt;
+            }
+            while ((c = *fmt) && c >= '0' && c <= '9') {
+                padCount *= 10;
+                padCount += c - '0';
+                ++fmt;
+            }
             switch (c) {
             case 's':
                 v64 = va_arg(args, uint64_t); // Addresses are 64-bit
-                puts(reinterpret_cast<const char *>(v64));
+                puts(reinterpret_cast<const char *>(v64), padChar, padCount);
                 break;
             case 'd':
                 v32 = va_arg(args, uint32_t);
-                puts(itoa::itoa<10>(buf, v32));
+                puts(itoa::itoa<10>(buf, v32), padChar, padCount);
                 break;
             case 'x':
                 v32 = va_arg(args, uint32_t);
-                puts(itoa::itoa<16>(buf, v32));
+                puts(itoa::itoa<16>(buf, v32), padChar, padCount);
                 break;
             case 'u':
                 v32 = va_arg(args, uint32_t);
-                puts(itoa::itoa<10, true>(buf, v32));
+                puts(itoa::itoa<10, true>(buf, v32), padChar, padCount);
+                break;
+            case 'a':
+                v32 = va_arg(args, uint32_t);
+                puts("0x");
+                puts(itoa::itoa<16>(buf, v32), '0', 8);
                 break;
             case 'l':
                 c = *++fmt;
                 switch (c) {
                 case 'd':
                     v64 = va_arg(args, uint64_t);
-                    puts(itoa::itoa<10>(buf, v64));
+                    puts(itoa::itoa<10>(buf, v64), padChar, padCount);
                     break;
                 case 'x':
                     v64 = va_arg(args, uint64_t);
-                    puts(itoa::itoa<16>(buf, v64));
+                    puts(itoa::itoa<16>(buf, v64), padChar, padCount);
                     break;
                 case 'u':
                     v64 = va_arg(args, uint64_t);
-                    puts(itoa::itoa<10, true>(buf, v64));
+                    puts(itoa::itoa<10, true>(buf, v64), padChar, padCount);
+                    break;
+                case 'a':
+                    v64 = va_arg(args, uint64_t);
+                    puts("0x");
+                    puts(itoa::itoa<16>(buf, v64), '0', 16);
                     break;
                 default:
                     break;
