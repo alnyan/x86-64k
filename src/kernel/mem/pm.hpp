@@ -30,6 +30,8 @@ namespace pm {
 
         void apply();
 
+        void dump();
+
     private:
         Pml4Entry m_entries[512];
     };

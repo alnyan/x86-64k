@@ -137,6 +137,45 @@ result pm::Pml4::unmap(pm::AddressType vaddr) {
     return found ? result(0) : result(1);
 }
 
+void pm::Pml4::dump() {
+    debug::printf("pm::dump(0x%lx)\n", this);
+    for (size_t pml4i = 0; pml4i < 512; ++pml4i) {
+        Pml4Entry pml4e = m_entries[pml4i];
+        if (!(pml4e & pm::FlagsType::F_PRESENT)) {
+            continue;
+        }
+
+        PdptEntry *pdpt = reinterpret_cast<PdptEntry *>(pml4e & ~0xFFF);
+
+        for (size_t pdpti = 0; pdpti < 512; ++pdpti) {
+            PdptEntry pdpte = pdpt[pdpti];
+
+            if (!(pdpte & pm::FlagsType::F_PRESENT)) {
+                continue;            
+            }
+
+            PagedirEntry *pd = reinterpret_cast<PagedirEntry *>(pdpte & ~0xFFF);
+
+            for (size_t pdi = 0; pdi < 512; ++pdi) {
+                PagedirEntry pde = pd[pdi];
+
+                if (!(pde & pm::FlagsType::F_PRESENT)) {
+                    continue;
+                }
+
+                pm::AddressType vaddr = (pml4i << 39) | (pdpti << 30) | (pdi << 21);
+                pm::AddressType paddr = pde & ~0xFFF;
+
+                debug::printf(" * 0x%lx - 0x%lx -> 0x%lx - 0x%lx\n",
+                    vaddr,
+                    vaddr + 0x200000,
+                    paddr,
+                    paddr + 0x200000);
+            }
+        }
+    }
+}
+
 void pm::dumpAlloc() {
     debug::printf("Dumping tracking info:\n");
     for (uintptr_t i = m_pagingStructureRange.start; i < m_pagingStructureRange.end; i += 0x1000) {

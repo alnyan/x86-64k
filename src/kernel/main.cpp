@@ -20,6 +20,8 @@ extern "C" void kernel_main(LoaderData *loaderData) {
     pm::retainLoaderPaging(loaderData);
     mm::init();
 
+    pm::kernel()->dump();
+
     while (true) {
     }
 }
