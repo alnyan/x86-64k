@@ -121,7 +121,7 @@ option<mm::AddressType> mm::alloc(pm::Pml4 *p, size_t pageCount, mm::AllocFlagsT
     return option<mm::AddressType>::some(vstart);
 }
 
-void mm::free(pm::Pml4 *p, mm::AddressType start, size_t count, mm::AllocFlagsType flags) {
+void mm::free(pm::Pml4 *p, mm::AddressType start, size_t count) {
     debug::printf("mm::free %la - %la\n", start, start + count * 0x200000);
 
     for (size_t i = 0; i < count; ++i) {

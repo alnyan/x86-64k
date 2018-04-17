@@ -36,7 +36,7 @@ namespace mm {
     using AddressType = uintptr_t;
 
     option<AddressType> alloc(pm::Pml4 *p, size_t pageCount, AllocFlagsType flags);
-    void free(pm::Pml4 *p, AddressType start, size_t pageCount, AllocFlagsType flags);
+    void free(pm::Pml4 *p, AddressType start, size_t pageCount);
 
     void init();
 
