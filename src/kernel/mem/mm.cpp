@@ -82,13 +82,18 @@ option<mm::AddressType> mm::alloc(pm::Pml4 *p, size_t pageCount, mm::AllocFlagsT
         return option<mm::AddressType>::none();
     }
 
+    // TODO: this code is assuming flag layouts are identical
+    mm::VirtualAllocFlagsType vaflags = mm::VirtualAllocFlagsType(flags);
+    mm::PhysicalAllocFlagsType paflags = mm::PhysicalAllocFlagsType(flags);
+    pm::FlagsType pmflags = pm::FlagsType(flags);
+
     debug::printf("mm::alloc %lu pages\n", pageCount);
     // Make sure we don't allocate huge buffer on stack
     assert(pageCount <= 32);
 
     // Find virtual range
     // TODO: convert flags
-    auto vr = findVirtualRange(p, pageCount, mm::VirtualAllocFlagsType(0));
+    auto vr = findVirtualRange(p, pageCount, vaflags);
     if (!vr) {
         debug::printf(" = failed to find virtual pages\n");
         return option<mm::AddressType>::none();
@@ -99,8 +104,7 @@ option<mm::AddressType> mm::alloc(pm::Pml4 *p, size_t pageCount, mm::AllocFlagsT
     // Allocate physical pages
     // TODO: ???
     mm::PhysicalPageType physPages[pageCount];
-    // TODO: convert flags
-    auto pr = allocPhysicalPages(physPages, pageCount, mm::PhysicalAllocFlagsType(0));
+    auto pr = allocPhysicalPages(physPages, pageCount, paflags);
     if (!pr) {
         debug::printf(" = failed to alloc physical pages\n");
         return option<mm::AddressType>::none();
@@ -111,8 +115,7 @@ option<mm::AddressType> mm::alloc(pm::Pml4 *p, size_t pageCount, mm::AllocFlagsT
         mm::AddressType vaddr = vstart + i * 0x200000;
         mm::AddressType paddr = physPages[i];
 
-        // TODO: convert flags
-        p->map(vaddr, paddr, pm::FlagsType(0));
+        p->map(vaddr, paddr, pmflags);
     }
 
     return option<mm::AddressType>::some(vstart);

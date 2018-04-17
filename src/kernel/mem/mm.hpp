@@ -18,12 +18,18 @@ namespace mm {
     };
 
     enum VirtualAllocFlagsType: uint32_t {
+        VF_RW   = 1 << 0,
+        VF_USER = 1 << 1
     };
 
     enum PhysicalAllocFlagsType: uint32_t {
+        PF_RW   = 1 << 0,
+        PF_USER = 1 << 1
     };
 
     enum AllocFlagsType: uint32_t {
+        AF_RW   = 1 << 0,
+        AF_USER = 1 << 1
     };
 
     using PhysicalPageType = uintptr_t;
