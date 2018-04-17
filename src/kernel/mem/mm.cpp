@@ -24,7 +24,7 @@ option<mm::AddressType> findVirtualRange(pm::Pml4 *p, size_t pageCount, mm::Virt
         }
 
         if (!res) {
-            debug::printf(" = 0x%lx - 0x%lx\n", rs, rs + pageCount * 0x200000);
+            debug::printf(" = %la - %la\n", rs, rs + pageCount * 0x200000);
             return rs;
         }
     }
@@ -47,7 +47,7 @@ result allocPhysicalPages(mm::PhysicalPageType *pages, size_t count, mm::Physica
         size_t bit = 1 << ((addr >> 21) & 0x3F);
 
         if (!(m_physicalTrackingStructure[idx] & bit)) {
-            debug::printf(" = 0x%lx\n", addr);
+            debug::printf(" = %la\n", addr);
             m_physicalTrackingStructure[idx] |= bit;
             pages[allocd++] = addr;
             last = addr;
@@ -62,7 +62,7 @@ result allocPhysicalPages(mm::PhysicalPageType *pages, size_t count, mm::Physica
             size_t idx = addr >> 27;
             size_t bit = (addr >> 21) & 0x3F;
 
-            debug::printf(" - 0x%lx\n", addr);
+            debug::printf(" - %la\n", addr);
             m_physicalTrackingStructure[idx] &= ~bit;
         }
         return result(1);
@@ -122,7 +122,7 @@ option<mm::AddressType> mm::alloc(pm::Pml4 *p, size_t pageCount, mm::AllocFlagsT
 }
 
 void mm::free(pm::Pml4 *p, mm::AddressType start, size_t count, mm::AllocFlagsType flags) {
-    debug::printf("mm::free 0x%lx - 0x%lx\n", start, start + count * 0x200000);
+    debug::printf("mm::free %la - %la\n", start, start + count * 0x200000);
 
     for (size_t i = 0; i < count; ++i) {
         mm::AddressType vaddr = start + i * 0x200000;

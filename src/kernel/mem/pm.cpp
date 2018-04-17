@@ -22,7 +22,7 @@ pm::Pml4::Pml4() {
 }
 
 void pm::Pml4::map(pm::AddressType vaddr, pm::AddressType paddr, pm::FlagsType flags) {
-    debug::printf("pm::map(0x%lx) 0x%lx -> 0x%lx\n", this, vaddr, paddr);
+    debug::printf("pm::map(%la) %la -> %la\n", this, vaddr, paddr);
     assert(!(vaddr & 0x1FFFFF));
     assert(!(paddr & 0x1FFFFF));
 
@@ -72,7 +72,7 @@ void pm::Pml4::map(pm::AddressType vaddr, pm::AddressType paddr, pm::FlagsType f
 }
 
 option<uintptr_t> pm::Pml4::get(pm::AddressType vaddrFull) const {
-    debug::printf("pm::get(0x%lx) 0x%lx\n", this, vaddrFull);
+    debug::printf("pm::get(%la) %la\n", this, vaddrFull);
     uintptr_t vaddr = vaddrFull & ~0x1FFFFF;
     uintptr_t low = vaddrFull & 0x1FFFFF;
 
@@ -98,7 +98,7 @@ option<uintptr_t> pm::Pml4::get(pm::AddressType vaddrFull) const {
 }
 
 result pm::Pml4::unmap(pm::AddressType vaddr) {
-    debug::printf("pm::unmap(0x%lx) 0x%lx\n", this, vaddr);
+    debug::printf("pm::unmap(%la) %la\n", this, vaddr);
     assert(!(vaddr & 0x1FFFFF));
 
     size_t pml4i = vaddr >> 39;
@@ -138,7 +138,7 @@ result pm::Pml4::unmap(pm::AddressType vaddr) {
 }
 
 void pm::Pml4::dump() {
-    debug::printf("pm::dump(0x%lx)\n", this);
+    debug::printf("pm::dump(%la)\n", this);
     for (size_t pml4i = 0; pml4i < 512; ++pml4i) {
         Pml4Entry pml4e = m_entries[pml4i];
         if (!(pml4e & pm::FlagsType::F_PRESENT)) {
@@ -166,7 +166,7 @@ void pm::Pml4::dump() {
                 pm::AddressType vaddr = (pml4i << 39) | (pdpti << 30) | (pdi << 21);
                 pm::AddressType paddr = pde & ~0xFFF;
 
-                debug::printf(" * 0x%lx - 0x%lx -> 0x%lx - 0x%lx\n",
+                debug::printf(" * %la - %la -> %la - %la\n",
                     vaddr,
                     vaddr + 0x200000,
                     paddr,
@@ -183,7 +183,7 @@ void pm::dumpAlloc() {
         uintptr_t bit = PM_TRACKING_BIT(i - m_pagingStructureRange.start);
 
         if (m_pagingTrackingStructure[idx] & bit) {
-            debug::printf(" * (%ld:%ld) 0x%lx\n", idx, ((i - m_pagingStructureRange.start) >> 12) & 0x3F, i);
+            debug::printf(" * (%lu:%lu) %la\n", idx, ((i - m_pagingStructureRange.start) >> 12) & 0x3F, i);
         }
     }
 }
@@ -208,7 +208,7 @@ option<uintptr_t> pm::alloc() {
         if (!(m_pagingTrackingStructure[idx] & bit)) {
             m_pagingTrackingStructure[idx] |= bit;
             memset(reinterpret_cast<void *>(addr), 0, 0x1000);
-            debug::printf(" = 0x%lx\n", addr);
+            debug::printf(" = %la\n", addr);
             return option<uintptr_t>::some(addr);
         }
     }
@@ -217,7 +217,7 @@ option<uintptr_t> pm::alloc() {
 }
 
 void pm::free(uintptr_t addr) {
-    debug::printf("pm::free 0x%lx\n", addr);
+    debug::printf("pm::free %la\n", addr);
 
     uintptr_t idx = PM_TRACKING_INDEX(addr - m_pagingStructureRange.start);
     uintptr_t bit = PM_TRACKING_BIT(addr - m_pagingStructureRange.start);
@@ -237,7 +237,7 @@ pm::Pml4 *pm::current() {
 }
 
 pm::RefcountType pm::incRefs(uintptr_t addr) {
-    debug::printf("pm::++ 0x%lx\n", addr);
+    debug::printf("pm::++ %la\n", addr);
 
     assert(m_pagingStructureRange.contains(addr));
     assert(!(addr & 0xFFF));
@@ -248,7 +248,7 @@ pm::RefcountType pm::incRefs(uintptr_t addr) {
 }
 
 pm::RefcountType pm::decRefs(uintptr_t addr) {
-    debug::printf("pm::-- 0x%lx\n", addr);
+    debug::printf("pm::-- %la\n", addr);
 
     assert(m_pagingStructureRange.contains(addr));
     assert(!(addr & 0xFFF));
@@ -267,7 +267,7 @@ void pm::retainLoaderPaging(const LoaderData *loaderData) {
     m_pagingStructureRange.end = loaderData->loaderPagingBase + loaderData->loaderPagingSize;
     pm::TrackingFieldType *oldTracking = reinterpret_cast<pm::TrackingFieldType *>(loaderData->loaderPagingTracking);
 
-    debug::printf("Retained paging data from loader: 0x%lx - 0x%lx (%lu entries), tracking_ptr = 0x%lx\n",
+    debug::printf("Retained paging data from loader: %la - %la (%lu entries), tracking_ptr = %la\n",
         m_pagingStructureRange.start,
         m_pagingStructureRange.end,
         (m_pagingStructureRange.end - m_pagingStructureRange.start) / 0x1000,
@@ -282,15 +282,15 @@ void pm::retainLoaderPaging(const LoaderData *loaderData) {
     size_t refcountSize = ((KERNEL_LOCATION - m_pagingStructureRange.start) / 0x1000) * sizeof(pm::RefcountType);
     uintptr_t refcountAddr = trackingAddr + trackingDelta + trackingOld;
 
-    debug::printf("Expanded paging structure region: 0x%lx - 0x%lx, tracking structure change: %luB + %luB for refcounting (was %luB)\n",
+    debug::printf("Expanded paging structure region: %la - %la, tracking structure change: %luB + %luB for refcounting (was %luB)\n",
         m_pagingStructureRange.start,
         KERNEL_LOCATION,
         trackingDelta,
         refcountSize,
         trackingOld);
     
-    debug::printf("Refcounting data allocated at 0x%lx\n", refcountAddr);
-    debug::printf("Tracking data relocated to 0x%lx\n", trackingAddr);
+    debug::printf("Refcounting data allocated at %la\n", refcountAddr);
+    debug::printf("Tracking data relocated to %la\n", trackingAddr);
 
     // 2. prepare new tracking block
     m_pagingTrackingStructure = reinterpret_cast<pm::TrackingFieldType *>(trackingAddr);
@@ -308,7 +308,7 @@ void pm::retainLoaderPaging(const LoaderData *loaderData) {
         uint32_t bit = 1 << ((oldAddr >> 12) & 0x1F);
         
         if (oldTracking32[idx] & bit) {
-            debug::printf("Retaining 0x%x\n", oldAddr + m_pagingStructureRange.start);
+            debug::printf("Retaining %la\n", oldAddr + m_pagingStructureRange.start);
             setAlloc(static_cast<uint64_t>(oldAddr + m_pagingStructureRange.start));
 
             if (oldAddr + m_pagingStructureRange.start > maxStruct) {
@@ -337,7 +337,7 @@ void pm::retainLoaderPaging(const LoaderData *loaderData) {
     // 6. cleanup dirty pages (grub may have loaded modules there)
     if (maxStruct != trackingAddr) {
         maxStruct += 0x1000;
-        debug::printf("Clearing 0x%lx - 0x%lx\n", maxStruct, m_pagingStructureRange.end);
+        debug::printf("Clearing %la - %la\n", maxStruct, m_pagingStructureRange.end);
         memset(reinterpret_cast<void *>(maxStruct), 0, m_pagingStructureRange.end - maxStruct);
     }
 }
