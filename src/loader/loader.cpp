@@ -47,7 +47,13 @@ void load_elf(uintptr_t loadAddr, uintptr_t mod_start, size_t mod_size) {
             uint64_t off64 = programHeader->p_offset;
             uint32_t off32 = static_cast<uint32_t>(off64);
 
+            uint64_t memsz64 = programHeader->p_memsz;
+            uint32_t memsz32 = programHeader->p_memsz;
+
             const void *l = reinterpret_cast<const void *>(mod_start + off32);
+
+            // Sanity check: only one page is mapped now
+            assert(memsz32 <= 0x200000);
 
             debug::printf("paddr32 = %a\n", paddr32);
 
