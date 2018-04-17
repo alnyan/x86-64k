@@ -46,7 +46,7 @@ void pm::Pml4::map(pm::AddressType vaddr, pm::AddressType paddr, pm::FlagsType f
             incRefs(reinterpret_cast<uintptr_t>(pd));
         } else {
             // Allocate new PD
-            uintptr_t pdaddr = *alloc();
+            uintptr_t pdaddr = alloc().orPanic("Failed to allocate PD");
 
             PagedirEntry *pd = reinterpret_cast<PagedirEntry *>(pdaddr);
 
@@ -57,8 +57,8 @@ void pm::Pml4::map(pm::AddressType vaddr, pm::AddressType paddr, pm::FlagsType f
         }
     } else {
         // Allocate PDPT and PD
-        uintptr_t pdptaddr = *alloc();
-        uintptr_t pdaddr = *alloc();
+        uintptr_t pdptaddr = alloc().orPanic("Failed to allocate PDPT");
+        uintptr_t pdaddr = alloc().orPanic("Failed to allocate PD");
 
         PdptEntry *pdpt = reinterpret_cast<PdptEntry *>(pdptaddr);
         PagedirEntry *pd = reinterpret_cast<PagedirEntry *>(pdaddr);
@@ -68,7 +68,6 @@ void pm::Pml4::map(pm::AddressType vaddr, pm::AddressType paddr, pm::FlagsType f
         m_entries[pml4i] = pdptaddr | pm::FlagsType::F_PRESENT | pm::FlagsType::F_RW;
         incRefs(pdaddr);
         incRefs(pdptaddr);
-        incRefs(reinterpret_cast<uintptr_t>(m_entries));
     }
 }
 
@@ -98,6 +97,46 @@ option<uintptr_t> pm::Pml4::get(pm::AddressType vaddrFull) const {
     return option<uintptr_t>::none();
 }
 
+result pm::Pml4::unmap(pm::AddressType vaddr) {
+    debug::printf("pm::unmap(0x%lx) 0x%lx\n", this, vaddr);
+    assert(!(vaddr & 0x1FFFFF));
+
+    size_t pml4i = vaddr >> 39;
+    size_t pdpti = (vaddr >> 30) & 0x1FF;
+    size_t pdi = (vaddr >> 21) & 0x1FF;
+
+    bool found = false;
+
+    if (m_entries[pml4i] & pm::FlagsType::F_PRESENT) {
+        Pml4Entry pml4e = m_entries[pml4i];
+        PdptEntry *pdpt = reinterpret_cast<PdptEntry *>(pml4e & ~0xFFF);
+
+        if (pdpt[pdpti] & pm::FlagsType::F_PRESENT) {
+            PdptEntry pdpte = pdpt[pdpti];
+            PagedirEntry *pd = reinterpret_cast<PagedirEntry *>(pdpte & ~0xFFF);
+
+            bool pdfreed = false;
+            if (pd[pdi] & pm::FlagsType::F_PRESENT) {
+                if (decRefs(reinterpret_cast<uintptr_t>(pd)) == 0) {
+                    pdfreed = true;
+                    free(reinterpret_cast<uintptr_t>(pd));
+                }
+                found = true;
+            }
+
+            if (pdfreed) {
+                if (decRefs(reinterpret_cast<uintptr_t>(pdpt)) == 0) {
+                    free(reinterpret_cast<uintptr_t>(pdpt));
+                }
+            }
+        }
+
+        // PML4s are not refcounted
+    }
+
+    return found ? result(0) : result(1);
+}
+
 void pm::dumpAlloc() {
     debug::printf("Dumping tracking info:\n");
     for (uintptr_t i = m_pagingStructureRange.start; i < m_pagingStructureRange.end; i += 0x1000) {
@@ -115,7 +154,7 @@ void pm::setAlloc(uintptr_t addr) {
     assert(!(addr & 0xFFF));
 
     uintptr_t idx = PM_TRACKING_INDEX(addr - m_pagingStructureRange.start);
-    uintptr_t bit = PM_TRACKING_BIT(addr - m_pagingStructureRange.end);
+    uintptr_t bit = PM_TRACKING_BIT(addr - m_pagingStructureRange.start);
 
     m_pagingTrackingStructure[idx] |= bit;
 }
@@ -125,16 +164,29 @@ option<uintptr_t> pm::alloc() {
 
     for (uintptr_t addr = m_pagingStructureRange.start; addr < m_pagingStructureRange.end; addr += 0x1000) {
         uintptr_t idx = PM_TRACKING_INDEX(addr - m_pagingStructureRange.start);
-        uintptr_t bit = PM_TRACKING_BIT(addr - m_pagingStructureRange.end);
+        uintptr_t bit = PM_TRACKING_BIT(addr - m_pagingStructureRange.start);
 
         if (!(m_pagingTrackingStructure[idx] & bit)) {
             m_pagingTrackingStructure[idx] |= bit;
+            memset(reinterpret_cast<void *>(addr), 0, 0x1000);
             debug::printf(" = 0x%lx\n", addr);
             return option<uintptr_t>::some(addr);
         }
     }
 
     return option<uintptr_t>::none();
+}
+
+void pm::free(uintptr_t addr) {
+    debug::printf("pm::free 0x%lx\n", addr);
+
+    uintptr_t idx = PM_TRACKING_INDEX(addr - m_pagingStructureRange.start);
+    uintptr_t bit = PM_TRACKING_BIT(addr - m_pagingStructureRange.start);
+
+    // Make sure it was allocated
+    assert(m_pagingTrackingStructure[idx] & bit);
+
+    m_pagingTrackingStructure[idx] &= ~bit;
 }
 
 pm::Pml4 *pm::kernel() {
@@ -210,6 +262,7 @@ void pm::retainLoaderPaging(const LoaderData *loaderData) {
     debug::printf("Clearing %luB\n", trackingOld + trackingDelta);
 
     // 3. copy old info from loader and setup refcounting
+    uintptr_t maxStruct = 0;
     uint32_t *oldTracking32 = reinterpret_cast<uint32_t *>(oldTracking);
     for (uint32_t oldAddr = 0; oldAddr < (trackingOld / 4) << 17; oldAddr += 0x1000) {
         uint32_t idx = oldAddr >> 17;
@@ -218,6 +271,10 @@ void pm::retainLoaderPaging(const LoaderData *loaderData) {
         if (oldTracking32[idx] & bit) {
             debug::printf("Retaining 0x%x\n", oldAddr + m_pagingStructureRange.start);
             setAlloc(static_cast<uint64_t>(oldAddr + m_pagingStructureRange.start));
+
+            if (oldAddr + m_pagingStructureRange.start > maxStruct) {
+                maxStruct = oldAddr + m_pagingStructureRange.start;
+            }
 
             // Iterate page directory and fill refcount
             uint64_t *s = reinterpret_cast<uint64_t *>(oldAddr + m_pagingStructureRange.start);
@@ -237,4 +294,11 @@ void pm::retainLoaderPaging(const LoaderData *loaderData) {
     // 5. set current paging structure
     m_kernel = reinterpret_cast<Pml4 *>(m_pagingStructureRange.start);
     m_current = m_kernel;  
+
+    // 6. cleanup dirty pages (grub may have loaded modules there)
+    if (maxStruct != trackingAddr) {
+        maxStruct += 0x1000;
+        debug::printf("Clearing 0x%lx - 0x%lx\n", maxStruct, m_pagingStructureRange.end);
+        memset(reinterpret_cast<void *>(maxStruct), 0, m_pagingStructureRange.end - maxStruct);
+    }
 }

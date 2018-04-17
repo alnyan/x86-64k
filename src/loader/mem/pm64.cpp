@@ -48,6 +48,7 @@ void pm::pm64::Pml4::map(pm::pm64::AddressType vaddr, pm::pm64::AddressType padd
         }
     } else {
         debug::printf("  Adding PDP\n");
+        debug::printf("  Adding PD\n");
         // Allocate pdp
         uintptr_t pdp_addr = pm::alloc();
         assert(pdp_addr != 0xFFFFFFFF);

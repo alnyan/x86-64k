@@ -33,6 +33,13 @@ public:
         return *m_ptr;
     }
 
+    const T &orPanic(const char *msg) const {
+        if (!m_ptr) {
+            panic_msg(msg);
+        }
+        return *m_ptr;
+    }
+
 private:
     uint8_t m_value[sizeof(T)] alignas(T);
     T *m_ptr;

@@ -2,6 +2,7 @@
 #include <stdint.h>
 #include "../loader/loader.hpp"
 #include <algo/option.hpp>
+#include <algo/result.hpp>
 
 namespace pm {
 
@@ -24,6 +25,7 @@ namespace pm {
         Pml4();
 
         void map(AddressType vaddr, AddressType paddr, FlagsType flags);
+        result unmap(AddressType vaddr);
         option<uintptr_t> get(AddressType vaddr) const;
 
         void apply();

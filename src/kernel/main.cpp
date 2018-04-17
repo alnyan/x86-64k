@@ -3,6 +3,7 @@
 #include <sys/debug.hpp>
 #include <algo/string.hpp>
 #include <mem/pm.hpp>
+#include <mem/mm.hpp>
 
 void validateLoaderData(LoaderData *data) {
     uint32_t sum = 0;
@@ -17,6 +18,7 @@ extern "C" void kernel_main(LoaderData *loaderData) {
     debug::printf("Entered kernel\n");
     validateLoaderData(loaderData);
     pm::retainLoaderPaging(loaderData);
+    mm::init();
 
     while (true) {
     }
