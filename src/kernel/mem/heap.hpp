@@ -27,6 +27,7 @@ namespace heap {
         option<void *> allocAligned(size_t size, size_t align);
         void *allocOrPanic(size_t size);
         void free(void *ptr);
+        void freeChecked(void *ptr, size_t sz);
 
         HeapHeader *rootHeader();
 

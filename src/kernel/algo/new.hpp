@@ -20,7 +20,7 @@ inline void operator delete(void *v) throw() {
 
 inline void operator delete(void *v, size_t n) throw() {
     assert(heap::kernelHeap.valid());
-    heap::kernelHeap.free(v);
+    heap::kernelHeap.freeChecked(v, n);
 }
 
 inline void operator delete [](void *v) throw() {
@@ -30,5 +30,5 @@ inline void operator delete [](void *v) throw() {
 
 inline void operator delete [](void *v, size_t n) throw() {
     assert(heap::kernelHeap.valid());
-    heap::kernelHeap.free(v);
+    heap::kernelHeap.freeChecked(v, n);
 }

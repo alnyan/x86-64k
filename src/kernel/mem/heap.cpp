@@ -234,6 +234,17 @@ void heap::Heap::free(void *p) {
     }
 }
 
+void heap::Heap::freeChecked(void *ptr, size_t sz) {
+    debug::printf("heap::freeChecked(%la) %la, sz = %lu\n", m_base, ptr, sz);
+    uintptr_t addr = reinterpret_cast<uintptr_t>(ptr);
+    HeapHeader *hdr = reinterpret_cast<HeapHeader *>(addr - sizeof(HeapHeader));
+    assert((hdr->flags & heap::headerMagic) == heap::headerMagic);
+
+    assert(sz == hdr->length);
+
+    free(ptr);
+}
+
 void heap::Heap::dump() {
     debug::printf("heap::dump(%la)\n", m_base);
     for (HeapHeader *hdr = rootHeader(); hdr; hdr = hdr->next) {
