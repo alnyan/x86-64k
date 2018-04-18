@@ -1,5 +1,6 @@
 #include "heap.hpp"
 #include <algo/memory.hpp>
+#include <algo/algorithm.hpp>
 #include <mem/mm.hpp>
 
 heap::Heap heap::kernelHeap;
@@ -89,6 +90,103 @@ option<void *> heap::Heap::alloc(size_t size) {
             hdr->flags |= heap::HeapFlags::HF_ALLOC;
 
             return option<void *>::some(reinterpret_cast<void *>(addr));
+        }
+    }
+
+    return option<void *>::none();
+}
+
+option<void *> heap::Heap::allocAligned(size_t size, size_t align) {
+    debug::printf("heap::allocAligned(%la) %lu, align=0x%lx\n", m_base, size, align);
+    // TODO: check that align is power of two
+
+    for (HeapHeader *hdr = rootHeader(); hdr; hdr = hdr->next) {
+        if ((hdr->flags & heap::headerMagic) != heap::headerMagic) {
+            panic_msg("Heap is broken");
+        }
+        if (hdr->flags & heap::HeapFlags::HF_ALLOC) {
+            continue;
+        }
+
+        uintptr_t addr = reinterpret_cast<uintptr_t>(hdr) + sizeof(HeapHeader);
+        uintptr_t nextAligned = alignUp(addr, align);
+
+        while (1) {
+            size_t padSize = nextAligned - addr;
+            ssize_t actualSizes = hdr->length - padSize;
+            if (actualSizes < 0) {
+                break;
+            }
+            size_t actualSize = static_cast<size_t>(actualSizes);
+
+            if (addr == nextAligned) {
+                // The block is already aligned
+
+                if (actualSize == size) {
+                    // No splits required
+                    hdr->flags |= heap::HeapFlags::HF_ALLOC;
+
+                    return option<void *>::some(reinterpret_cast<void *>(addr));
+                } else {
+                    // Cut end, return beginning
+                    hdr->flags |= heap::HeapFlags::HF_ALLOC;
+
+                    HeapHeader *newHeader = reinterpret_cast<HeapHeader *>(addr + size);
+                    newHeader->prev = hdr;
+                    newHeader->next = hdr->next;
+                    newHeader->flags = heap::headerMagic;
+                    newHeader->length = hdr->length - size - sizeof(HeapHeader);
+
+                    hdr->next = newHeader;
+                    hdr->length = size;
+
+                    return option<void *>::some(reinterpret_cast<void *>(addr));
+                }
+            } else {
+                // Make sure we can fit a header
+                if (padSize < sizeof(HeapHeader)) {
+                    nextAligned += align;
+
+                    if (nextAligned - addr >= hdr->length) {
+                        break;
+                    }
+                    continue;
+                }
+
+                // Cut padding
+                if (actualSize > size + sizeof(HeapHeader)) {
+                    // Cut end, return middle
+                    HeapHeader *end = reinterpret_cast<HeapHeader *>(nextAligned + size);
+                    HeapHeader *mid = reinterpret_cast<HeapHeader *>(nextAligned - sizeof(HeapHeader));
+
+                    end->next = hdr->next;
+                    mid->next = end;
+                    hdr->next = mid;
+                    end->length = actualSize - size - sizeof(HeapHeader);
+                    mid->length = size;
+                    hdr->length = padSize - sizeof(HeapHeader);
+                    end->flags = heap::headerMagic;
+                    mid->flags = heap::headerMagic | heap::HeapFlags::HF_ALLOC;
+                    mid->prev = hdr;
+                    end->prev = mid;
+
+                    return option<void *>::some(reinterpret_cast<void *>(nextAligned));
+                } else if (actualSize == size) {
+                    // Cut nothing more, return end
+                    HeapHeader *end = reinterpret_cast<HeapHeader *>(nextAligned - sizeof(HeapHeader));
+
+                    end->prev = hdr;
+                    end->next = hdr->next;
+                    hdr->next = end;
+
+                    end->length = size;
+                    hdr->length = padSize - sizeof(HeapHeader);
+
+                    end->flags = heap::headerMagic | heap::HeapFlags::HF_ALLOC;
+
+                    return option<void *>::some(reinterpret_cast<void *>(nextAligned));    
+                }
+            }
         }
     }
 
