@@ -258,10 +258,6 @@ bool heap::Heap::valid() const {
     return m_size && m_base;
 }
 
-void *heap::Heap::allocOrPanic(size_t s) {
-    return alloc(s).orPanic("Failed to allocate object on heap");
-}
-
 void heap::init() {
     auto heapRegion = mm::alloc(pm::kernel(), 16, mm::AllocFlagsType::AF_RW).orPanic("Failed to allocate memory for kernel heap");
     kernelHeap.reset(heapRegion, 16 * 0x200000);

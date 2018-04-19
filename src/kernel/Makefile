@@ -43,7 +43,7 @@ CXX64=$(TOOLCHAIN64)/bin/$(TARGET64)-g++
 KERNEL_CRTBEGIN=$(shell $(CXX64) -print-file-name=crtbegin.o)
 KERNEL_CRTEND=$(shell $(CXX64) -print-file-name=crtend.o)
 
-DIRS=$(shell dirname $(KERNEL_OBJECTS))
+DIRS=$(shell dirname $(KERNEL_OBJECTS)) $(BUILD_DIR)/docs/kernel
 
 all: $(BUILD_DIR)/kernel.elf
 
@@ -61,6 +61,9 @@ $(BUILD_DIR)/kernel/%.o: %.s
 
 $(BUILD_DIR)/kernel/%.o: %.cpp $(KERNEL_HEADERS)
 	$(CXX64) -c -o $@ $(KERNEL_CXXFLAGS) $<
+
+docs: $(KERNEL_SOURCES_CXX) $(KERNEL_HEADERS) mkdirs
+	doxygen doxygen.conf
 
 mkdirs:
 	@mkdir -p $(DIRS)

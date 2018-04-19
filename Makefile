@@ -24,3 +24,7 @@ qemu-gdb: build/image.iso
 
 clean:
 	rm -rf build
+
+docs: mkdirs
+	@BUILD_DIR=$(realpath build) make -C src/kernel docs
+

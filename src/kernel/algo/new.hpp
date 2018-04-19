@@ -5,12 +5,12 @@
 
 inline void *operator new(size_t v) throw() {
     assert(heap::kernelHeap.valid());
-    return heap::kernelHeap.allocOrPanic(v);
+    return heap::kernelHeap.alloc(v).orPanic("Allocation failed");
 }
 
 inline void *operator new[](size_t v) throw() {
     assert(heap::kernelHeap.valid());
-    return heap::kernelHeap.allocOrPanic(v);
+    return heap::kernelHeap.alloc(v).orPanic("Allocation failed");
 }
 
 inline void operator delete(void *v) throw() {
