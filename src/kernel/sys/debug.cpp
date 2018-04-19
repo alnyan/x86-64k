@@ -2,7 +2,22 @@
 #include <algo/itoa.hpp>
 #include <sys/panic.hpp>
 
-devices::rs232::SerialPort debug::out(0x3F8);
+devices::CharDevice* s_debug_devs[debug::MAX_DEBUG_DEVICES] = {};
+
+static void broadcast(char ch) {
+    for (unsigned i = 0; i < debug::MAX_DEBUG_DEVICES; i++) {
+        if (s_debug_devs[i] != nullptr) s_debug_devs[i]->putchar(ch);
+    }
+}
+
+void debug::regOutDev(devices::CharDevice *dev) {
+    for (unsigned i = 0; i < debug::MAX_DEBUG_DEVICES; i++) {
+        if (s_debug_devs[i] == nullptr) {
+            s_debug_devs[i] = dev;
+            return;
+        }
+    }
+}
 
 void debug::assertFail(const char *file, int line, const char *msg) {
     printf("%s:%d: %s\n", file, line, msg);
@@ -11,33 +26,33 @@ void debug::assertFail(const char *file, int line, const char *msg) {
 
 void debug::puts(const char *s) {
     while (*s) {
-        out.putc(*s++);
+        broadcast(*s++);
     }
 }
 
 void debug::puts(const char *s, char c, size_t p) {
     size_t l = strlen(s);
     for (size_t i = l; i < p; ++i) {
-        out.putc(c);
+        broadcast(c);
     }
     for (size_t i = 0; i < l; ++i) {
-        out.putc(s[i]);
+        broadcast(s[i]);
     }
 }
 
 void debug::print(const str &s) {
     size_t l = s.length();
     for (size_t i = 0; i < l; ++i) {
-        out.putc(s[i]);
+        broadcast(s[i]);
     }
 }
 
 void debug::println(const str &s) {
     size_t l = s.length();
     for (size_t i = 0; i < l; ++i) {
-        out.putc(s[i]);
+        broadcast(s[i]);
     }
-    out.putc('\n');
+    broadcast('\n');
 }
 
 void debug::printf(const char *fmt, ...) {
@@ -114,13 +129,13 @@ void debug::vprintf(const char *fmt, va_list args) {
                 }
                 break;
             default:
-                out.putc('%');
-                out.putc(c);
+                broadcast('%');
+                broadcast(c);
                 break;
             }
             break;
         default:
-            out.putc(c);
+            broadcast(c);
             break;
         }
         ++fmt;

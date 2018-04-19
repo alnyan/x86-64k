@@ -1,15 +1,17 @@
 #pragma once
+#include <dev/chardev.hpp>
 #include <stdint.h>
 
 namespace devices::rs232 {
 
     using PortType = uint16_t;
 
-    class SerialPort {
+    class SerialPort : public devices::CharDevice {
     public:
-        SerialPort(PortType port);
+        SerialPort(PortType port) : m_port(port) {};
 
-        void putc(char c);
+        void putchar(char c) override;
+        char getchar() override;
 
     private:
         const PortType m_port;

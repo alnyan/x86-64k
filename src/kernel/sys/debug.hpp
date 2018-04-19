@@ -2,7 +2,7 @@
 #include <stdint.h> 
 #include <stdarg.h>
 #include <sys/types.h>
-#include <dev/rs232.hpp>
+#include <dev/chardev.hpp>
 #include <algo/string.hpp>
 
 #define assert_stringify(x) #x
@@ -11,7 +11,10 @@
 
 namespace debug {
 
-    extern devices::rs232::SerialPort out;
+    const unsigned MAX_DEBUG_DEVICES = 2;
+
+    void regOutDev(devices::CharDevice *dev);
+    bool unregOutDev(devices::CharDevice *dev); 
 
     void puts(const char *s);
     void puts(const char *s, char padc, size_t pad);
