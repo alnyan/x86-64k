@@ -34,13 +34,13 @@ Features
 
 Here comes list of currently implemented and planned **basic** features:
 
-[x] It boots (yeah, that already was a hard task to get done)
-[x] 2MiB paging, dynamical mappings and structure allocation/freeing
-[x] Kernel heap
-[ ] Multitasking with processes and threads model
-[ ] Ring 3 a.k.a. userland
-[ ] Usermode ELF loading/execution
-[ ] Userspace library for kernel interaction (via system calls)
+- [x] It boots (yeah, that already was a hard task to get done)
+- [x] 2MiB paging, dynamical mappings and structure allocation/freeing
+- [x] Kernel heap
+- [ ] Multitasking with processes and threads model
+- [ ] Ring 3 a.k.a. userland
+- [ ] Usermode ELF loading/execution
+- [ ] Userspace library for kernel interaction (via system calls)
 
 Contribution
 ------------
