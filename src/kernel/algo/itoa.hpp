@@ -3,14 +3,27 @@
 
 namespace itoa {
 
+    /// Maximum unsigned value type for this platform (64 bits)
     using ValueType = uint64_t;
+    /// Maximum signed value type for this platform (64 bits)
     using SignedValueType = int64_t;
 
+    /// Maximum number of characters needed to store the result
     constexpr size_t bufferSize = sizeof(ValueType) * 8 + 1;
+
+    /// Array of digit characters
     constexpr char chars[] = "0123456789abcdef";
 
+    /**
+     * \brief Converts numerical integer value to string representation
+     * \param buf           - Output string buffer, must be able to store all digits plus NULL-terminator
+     * \param val           - Value to convert
+     * \param base          - Base (2/10/16/etc.), max = 16, min = 2
+     * \param u             - If base = 10, forces unsigned mode
+     * \return Pointer to the beginning of the buffer
+     */
     template<size_t base, bool u = false> char *itoa(char *buf, ValueType val) {
-        static_assert(base != 0 && base <= 16);
+        static_assert(base >= 2 && base <= 16);
         if (!val) {
             buf[0] = '0';
             buf[1] = 0;

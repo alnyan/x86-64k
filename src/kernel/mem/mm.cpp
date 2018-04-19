@@ -45,7 +45,7 @@ option<mm::AddressType> findVirtualRange(pm::Pml4 *p, size_t pageCount, mm::Virt
             return rs;
         }
     }
-    return option<mm::AddressType>::none();
+    return option<mm::AddressType>();
 }
 
 void freeVirtualRange(pm::Pml4 *p, mm::AddressType start, size_t pageCount, mm::VirtualAllocFlagsType flags);
@@ -96,7 +96,7 @@ void mm::init() {
 
 option<mm::AddressType> mm::alloc(pm::Pml4 *p, size_t pageCount, mm::AllocFlagsType flags) {
     if (pageCount == 0) {
-        return option<mm::AddressType>::none();
+        return option<mm::AddressType>();
     }
 
     // TODO: this code is assuming flag layouts are identical
@@ -109,11 +109,10 @@ option<mm::AddressType> mm::alloc(pm::Pml4 *p, size_t pageCount, mm::AllocFlagsT
     assert(pageCount <= 32);
 
     // Find virtual range
-    // TODO: convert flags
     auto vr = findVirtualRange(p, pageCount, vaflags);
     if (!vr) {
         debug::printf(" = failed to find virtual pages\n");
-        return option<mm::AddressType>::none();
+        return option<mm::AddressType>();
     }
 
     mm::AddressType vstart = *vr;
@@ -124,7 +123,7 @@ option<mm::AddressType> mm::alloc(pm::Pml4 *p, size_t pageCount, mm::AllocFlagsT
     auto pr = allocPhysicalPages(physPages, pageCount, paflags);
     if (!pr) {
         debug::printf(" = failed to alloc physical pages\n");
-        return option<mm::AddressType>::none();
+        return option<mm::AddressType>();
     }
 
     // Bind physical pages
@@ -135,7 +134,7 @@ option<mm::AddressType> mm::alloc(pm::Pml4 *p, size_t pageCount, mm::AllocFlagsT
         p->map(vaddr, paddr, pmflags);
     }
 
-    return option<mm::AddressType>::some(vstart);
+    return option<mm::AddressType>(vstart);
 }
 
 void mm::free(pm::Pml4 *p, mm::AddressType start, size_t count) {

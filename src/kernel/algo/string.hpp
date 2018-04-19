@@ -7,7 +7,6 @@ extern "C" {
     const char *strncmp(const char *a, const char *b, size_t lim);
 }
 
-// Immutable static string
 class str {
 public:
     str();

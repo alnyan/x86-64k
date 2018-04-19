@@ -94,7 +94,7 @@ option<uintptr_t> pm::Pml4::get(pm::AddressType vaddrFull) const {
         }
     }
 
-    return option<uintptr_t>::none();
+    return option<uintptr_t>();
 }
 
 result pm::Pml4::unmap(pm::AddressType vaddr) {
@@ -209,11 +209,11 @@ option<uintptr_t> pm::alloc() {
             m_pagingTrackingStructure[idx] |= bit;
             memset(reinterpret_cast<void *>(addr), 0, 0x1000);
             debug::printf(" = %la\n", addr);
-            return option<uintptr_t>::some(addr);
+            return option<uintptr_t>(addr);
         }
     }
 
-    return option<uintptr_t>::none();
+    return option<uintptr_t>();
 }
 
 void pm::free(uintptr_t addr) {

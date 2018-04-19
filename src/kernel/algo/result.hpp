@@ -5,7 +5,7 @@ using error = int;
 
 class result {
 public:
-    result(error e): m_error{e == 0 ? option<error>::none() : option<error>::some(e)} {
+    result(error e): m_error{e == 0 ? option<error>() : option<error>(e)} {
     }
 
     operator bool() const {

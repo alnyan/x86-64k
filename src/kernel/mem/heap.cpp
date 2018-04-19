@@ -84,16 +84,16 @@ option<void *> heap::Heap::alloc(size_t size) {
             hdr->next = newHeader;
             hdr->length = size;
 
-            return option<void *>::some(reinterpret_cast<void *>(addr));
+            return option<void *>(reinterpret_cast<void *>(addr));
         } else if (hdr->length == size) {
             // Allocate whole chunk
             hdr->flags |= heap::HeapFlags::HF_ALLOC;
 
-            return option<void *>::some(reinterpret_cast<void *>(addr));
+            return option<void *>(reinterpret_cast<void *>(addr));
         }
     }
 
-    return option<void *>::none();
+    return option<void *>();
 }
 
 option<void *> heap::Heap::allocAligned(size_t size, size_t align) {
@@ -126,7 +126,7 @@ option<void *> heap::Heap::allocAligned(size_t size, size_t align) {
                     // No splits required
                     hdr->flags |= heap::HeapFlags::HF_ALLOC;
 
-                    return option<void *>::some(reinterpret_cast<void *>(addr));
+                    return option<void *>(reinterpret_cast<void *>(addr));
                 } else {
                     // Cut end, return beginning
                     hdr->flags |= heap::HeapFlags::HF_ALLOC;
@@ -140,7 +140,7 @@ option<void *> heap::Heap::allocAligned(size_t size, size_t align) {
                     hdr->next = newHeader;
                     hdr->length = size;
 
-                    return option<void *>::some(reinterpret_cast<void *>(addr));
+                    return option<void *>(reinterpret_cast<void *>(addr));
                 }
             } else {
                 // Make sure we can fit a header
@@ -170,7 +170,7 @@ option<void *> heap::Heap::allocAligned(size_t size, size_t align) {
                     mid->prev = hdr;
                     end->prev = mid;
 
-                    return option<void *>::some(reinterpret_cast<void *>(nextAligned));
+                    return option<void *>(reinterpret_cast<void *>(nextAligned));
                 } else if (actualSize == size) {
                     // Cut nothing more, return end
                     HeapHeader *end = reinterpret_cast<HeapHeader *>(nextAligned - sizeof(HeapHeader));
@@ -184,13 +184,13 @@ option<void *> heap::Heap::allocAligned(size_t size, size_t align) {
 
                     end->flags = heap::headerMagic | heap::HeapFlags::HF_ALLOC;
 
-                    return option<void *>::some(reinterpret_cast<void *>(nextAligned));    
+                    return option<void *>(reinterpret_cast<void *>(nextAligned));    
                 }
             }
         }
     }
 
-    return option<void *>::none();
+    return option<void *>();
 }
 
 void heap::Heap::free(void *p) {
