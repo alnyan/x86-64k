@@ -1,13 +1,30 @@
 #include "mm.hpp"
 #include <algo/memory.hpp>
 
-using PhysicalPageTrackingType = uint64_t;
+// Hidden implementation details
+
+namespace mm {
+
+    enum VirtualAllocFlagsType: uint32_t {
+        VF_RW   = 1 << 0,
+        VF_USER = 1 << 1
+    };
+
+    enum PhysicalAllocFlagsType: uint32_t {
+        PF_RW   = 1 << 0,
+        PF_USER = 1 << 1
+    };
+
+    using PhysicalPageTrackingType = uint64_t;
+    using PhysicalPageType = uintptr_t;
+
+}
 
 // FIXME: only 4GiB
 #define PHYS_SIZE 0x1000000000
 
 static const range<pm::AddressType> m_virtualAllocRange(0x80000000, 0xFFFF00000000);
-static PhysicalPageTrackingType m_physicalTrackingStructure[PHYS_SIZE >> 24];
+static mm::PhysicalPageTrackingType m_physicalTrackingStructure[PHYS_SIZE >> 24];
 
 option<mm::AddressType> findVirtualRange(pm::Pml4 *p, size_t pageCount, mm::VirtualAllocFlagsType flags) {
     range<pm::AddressType> r;
