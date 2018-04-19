@@ -6,6 +6,7 @@
 #include <mem/mm.hpp>
 #include <mem/heap.hpp>
 #include <algo/new.hpp>
+#include <algo/memory.hpp>
 
 void validateLoaderData(LoaderData *data) {
     uint32_t sum = 0;
