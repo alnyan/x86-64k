@@ -17,10 +17,10 @@ build/image.iso: build/loader.elf build/kernel.elf src/grub/grub.cfg
 	grub-mkrescue -o $@ build/iso
 
 qemu-run: build/image.iso
-	qemu-system-x86_64 -cdrom build/image.iso -m 512 -enable-kvm -serial stdio
+	qemu-system-x86_64 -cdrom build/image.iso -m 512 -cpu qemu64,-vmx -serial stdio
 
 qemu-gdb: build/image.iso
-	qemu-system-x86_64 -cdrom build/image.iso -m 512 -S -s -serial stdio
+	qemu-system-x86_64 -cdrom build/image.iso -m 512 -cpu qemu64,-vmx -S -s -serial stdio
 
 clean:
 	rm -rf build
