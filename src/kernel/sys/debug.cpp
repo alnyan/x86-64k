@@ -1,13 +1,18 @@
 #include "debug.hpp"
 #include <algo/itoa.hpp>
+#include <algo/memory.hpp>
 #include <sys/panic.hpp>
 
-devices::CharDevice* s_debug_devs[debug::MAX_DEBUG_DEVICES] = {};
+devices::CharDevice* s_debug_devs[debug::MAX_DEBUG_DEVICES];
 
 static void broadcast(char ch) {
     for (unsigned i = 0; i < debug::MAX_DEBUG_DEVICES; i++) {
         if (s_debug_devs[i] != nullptr) s_debug_devs[i]->putchar(ch);
     }
+}
+
+void debug::init() {
+    memset(s_debug_devs, 0, sizeof(s_debug_devs));
 }
 
 void debug::regOutDev(devices::CharDevice *dev) {
@@ -17,6 +22,11 @@ void debug::regOutDev(devices::CharDevice *dev) {
             return;
         }
     }
+    dev->putchar('F');
+    dev->putchar('U');
+    dev->putchar('C');
+    dev->putchar('K');
+    dev->putchar('\n');
 }
 
 void debug::assertFail(const char *file, int line, const char *msg) {

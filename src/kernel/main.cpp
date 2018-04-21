@@ -8,6 +8,8 @@
 #include <algo/new.hpp>
 #include <dev/rs232.hpp>
 #include <dev/term80.hpp>
+#include <sys/isr.hpp>
+#include <sys/gdt.hpp>
 
 void validateLoaderData(LoaderData *data) {
     uint32_t sum = 0;
@@ -28,10 +30,13 @@ extern "C" void __cxa_pure_virtual() {
 }
 
 extern "C" void kernel_main(LoaderData *loaderData) {
+    debug::init();
     devices::rs232::SerialPort com1(0x3F8);
     devices::term80::TextTerminal b8;
     debug::regOutDev(&com1);
     debug::regOutDev(&b8);
+
+    gdt::setValidGdt();
 
     debug::printf("Entered kernel\n");
     validateLoaderData(loaderData);
@@ -39,6 +44,31 @@ extern "C" void kernel_main(LoaderData *loaderData) {
     mm::init();
     pm::kernel()->dump();
     heap::init();
+
+    isr_setup_handlers();
+    debug::printf("firing c8!\n");
+    __asm__ __volatile__ ("int $0xc8");
+    debug::printf("returned from c8!\n\n");
+
+    debug::printf("testing tss!\n");
+    debug::printf("downgrading to ring3\n");
+
+    asm volatile ( 
+        "mov $0x23, %ax\n" 
+        "mov %ax, %ds\n" 
+        "mov %ax, %es\n" 
+        "mov %rsp, %rax\n" 
+        "pushq $0x23\n" 
+        "pushq %rax\n"
+        "pushfq\n"
+        "pushq $0x1b\n"
+        "pushq $1f\n"
+        "iretq\n"
+        "1: \n" );
+
+    debug::printf("in usermode, calling c9\n");
+    __asm__ __volatile__ ("int $0xc9");
+    debug::printf("returned from c9 to usermode\n");
 
     while (true) {
     }

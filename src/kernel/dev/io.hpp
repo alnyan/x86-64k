@@ -14,5 +14,9 @@ namespace io {
         __asm__ __volatile__ ("in %1, %0" : "=a"(value) : "Nd"(port));
         return value;
     }
+    
+    static inline void wait() {
+        __asm__ __volatile__ ( "outb %%al, $0x80" : : "a"(0) );
+    }
 
 }

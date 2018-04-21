@@ -21,6 +21,7 @@ KERNEL_CXXFLAGS=-ffreestanding \
 				-mcmodel=kernel \
 				-mno-red-zone \
 				-static \
+				-msoft-float \
 				-mno-mmx \
 				-mno-sse \
 				-mno-sse2 \

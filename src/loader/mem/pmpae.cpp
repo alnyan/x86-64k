@@ -12,7 +12,7 @@ void pm::pae::Pdpt::apply() {
 }
 
 void pm::pae::Pdpt::map(pm::pae::AddressType vaddr, pm::pae::AddressType paddr, pm::pae::EntryFlagType flags) {
-    debug::printf("pm::pae::map %A -> %A\n", vaddr, paddr);
+    debug::printf("pm::pae::map %A -> %A w/ flags %x\n", vaddr, paddr, flags);
     // TODO: make sure vaddr and paddr are aligned
     uint32_t pdpti = vaddr >> 34;
     uint32_t pdi = (vaddr >> 21) & 0x1FF;

@@ -99,7 +99,6 @@ gdtr64:
 	.word (gdtr64 - gdt64 - 1)
 	.long gdt64
 
-
 .global mb_info_ptr
 .align 4
 mb_info_ptr:

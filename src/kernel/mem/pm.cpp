@@ -22,7 +22,7 @@ pm::Pml4::Pml4() {
 }
 
 void pm::Pml4::map(pm::AddressType vaddr, pm::AddressType paddr, pm::FlagsType flags) {
-    debug::printf("pm::map(%la) %la -> %la\n", this, vaddr, paddr);
+    debug::printf("pm::map(%la) %la -> %la w/ flags %x\n", this, vaddr, paddr, flags);
     assert(!(vaddr & 0x1FFFFF));
     assert(!(paddr & 0x1FFFFF));
 

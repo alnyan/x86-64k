@@ -61,7 +61,7 @@ void load_elf(uintptr_t loadAddr, uintptr_t mod_start, size_t mod_size) {
 
             debug::printf("page-aligned: %a\n", paddrPage);
             if (paddrPage >= loadAddr) {
-                pdp->map(0x00400000, paddrPage, 1 << 7);
+                pdp->map(0x00400000, paddrPage, 0x86);
                 pdp->apply();
             } else {
                 panic_msg("Physical address is too low\n");
@@ -77,9 +77,9 @@ void load_elf(uintptr_t loadAddr, uintptr_t mod_start, size_t mod_size) {
     pm_disable();
 
     pm::pm64::Pml4 *pml = new (0x100000) pm::pm64::Pml4;
-    pml->map(0x0, 0x0, 1 << 7);
-    pml->map(0x200000, 0x200000, 1 << 7);
-    pml->map(entry64, loadAddr, 1 << 7); // TODO: map more pages if needed
+    pml->map(0x0, 0x0, 0x86);
+    pml->map(0x200000, 0x200000, 0x86);
+    pml->map(entry64, loadAddr, 0x86); // TODO: map more pages if needed
     pml->apply();
 
     debug::printf("Entry: %A\n", entry64);
@@ -96,7 +96,6 @@ void load_elf(uintptr_t loadAddr, uintptr_t mod_start, size_t mod_size) {
     }
     sum &= 0xFF;
     loader_data.checksum = -sum;
-
     long_enter(entry64);
 }
 
@@ -122,8 +121,8 @@ extern "C" void loader_main(void) {
     // Map loader here
     pm::setAlloc(0x100000); // Because pdpt
     pdp = new (0x100000) pm::pae::Pdpt;
-    pdp->map(0x00000000, 0x00000000, 1 << 7);
-    pdp->map(0x00200000, 0x00200000, 1 << 7);
+    pdp->map(0x00000000, 0x00000000, 0x86);
+    pdp->map(0x00200000, 0x00200000, 0x86);
 
     pdp->apply();
     pae_enable();

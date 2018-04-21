@@ -12,7 +12,7 @@ void pm::pm64::Pml4::apply() {
 }
 
 void pm::pm64::Pml4::map(pm::pm64::AddressType vaddr, pm::pm64::AddressType paddr, pm::pm64::EntryFlagType flags) {
-    debug::printf("pm::pm64::map %A -> %A\n", vaddr, paddr);
+    debug::printf("pm::pm64::map %A -> %A w/ flags %x\n", vaddr, paddr, flags);
     // TODO: make sure vaddr and paddr are aligned
     uint64_t pml4i64 = vaddr >> 39;
     uint64_t pdpi64 = (vaddr >> 30) & 0x1FF;
@@ -44,7 +44,7 @@ void pm::pm64::Pml4::map(pm::pm64::AddressType vaddr, pm::pm64::AddressType padd
             PagedirType pd = reinterpret_cast<PagedirType>(pdaddr);
 
             pd[pdi] = paddr | static_cast<uint64_t>(flags | 0x81);
-            pdp[pdpi] = static_cast<uint64_t>(pdaddr | 1);
+            pdp[pdpi] = static_cast<uint64_t>(pdaddr | 6 | 1);
         }
     } else {
         debug::printf("  Adding PDP\n");
@@ -62,8 +62,8 @@ void pm::pm64::Pml4::map(pm::pm64::AddressType vaddr, pm::pm64::AddressType padd
         debug::printf("pdp32 = %a, pd32 = %a\n", pdp_addr, pdaddr);
 
         pd[pdi] = paddr | flags | 0x81;
-        pdp[pdpi] = static_cast<uint64_t>(pdaddr | 1);
-        m_entries[pml4i] = static_cast<uint64_t>(pdp_addr | 1);
+        pdp[pdpi] = static_cast<uint64_t>(pdaddr | 6 | 1);
+        m_entries[pml4i] = static_cast<uint64_t>(pdp_addr | 6 | 1);
 
         debug::printf("pdp[pdpi]64 = %A\n", pdp[pdpi]);
     }
