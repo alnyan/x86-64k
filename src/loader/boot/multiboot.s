@@ -18,6 +18,8 @@
 .align 16
 multiboot_entry:
     cli
+    mov $0xb8000, %eax // showing that here we are
+    movl $0x07210721, (%eax)
 
     movl %ebx, mb_info_ptr
 

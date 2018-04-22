@@ -22,11 +22,6 @@ void debug::regOutDev(devices::CharDevice *dev) {
             return;
         }
     }
-    dev->putchar('F');
-    dev->putchar('U');
-    dev->putchar('C');
-    dev->putchar('K');
-    dev->putchar('\n');
 }
 
 void debug::assertFail(const char *file, int line, const char *msg) {
@@ -77,9 +72,9 @@ void debug::vprintf(const char *fmt, va_list args) {
     char buf[itoa::bufferSize];
     uint32_t v32;
     uint64_t v64;
-    char padChar = -1;
-    size_t padCount = 0;
     while ((c = *fmt)) {
+        char padChar = -1;
+        size_t padCount = 0;
         switch (c) {
         case '%':
             c = *++fmt;

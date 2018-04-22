@@ -24,7 +24,7 @@ static void __attribute__ ((interrupt)) test_handler(interrupt_frame_t* _) {
 }
 
 extern "C" void test_handler_ring3(void) {
-	debug::printf("c8 handled!\n");
+	debug::printf("c9 handled!\n");
 }
 
 extern "C" void test_handler_ring3_s(interrupt_frame_t* _);

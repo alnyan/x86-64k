@@ -8,6 +8,7 @@
 #include <algo/new.hpp>
 #include <dev/rs232.hpp>
 #include <dev/term80.hpp>
+#include <dev/vesa.hpp>
 #include <sys/isr.hpp>
 #include <sys/gdt.hpp>
 
@@ -36,7 +37,8 @@ extern "C" void kernel_main(LoaderData *loaderData) {
     debug::regOutDev(&com1);
     debug::regOutDev(&b8);
 
-    gdt::setValidGdt();
+    // setting up new, valid GDT (and also TSS)
+    gdt::init();
 
     debug::printf("Entered kernel\n");
     validateLoaderData(loaderData);
@@ -44,6 +46,14 @@ extern "C" void kernel_main(LoaderData *loaderData) {
     mm::init();
     pm::kernel()->dump();
     heap::init();
+
+    // allocating 64K task-switch stack, 64-bit aligned
+    const unsigned taskswitchStackSize = 0x10000;
+    auto taskswitchStack = 
+        reinterpret_cast<uint8_t*>(heap::kernelHeap.allocAligned(taskswitchStackSize, sizeof(uintptr_t)).orPanic("Couldn't allocate task-switch stack"));
+    gdt::setTaskswitchStack(taskswitchStack + taskswitchStackSize /* passing upper bound */);
+
+    vesa::init();
 
     isr_setup_handlers();
     debug::printf("firing c8!\n");

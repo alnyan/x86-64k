@@ -118,6 +118,7 @@ uint32_t calculateLoadAddr(struct multiboot_mod_list *mods, uint32_t modCount) {
 }
 
 extern "C" void loader_main(void) {
+    debug::printf("at loader_main\n");
     // Map loader here
     pm::setAlloc(0x100000); // Because pdpt
     pdp = new (0x100000) pm::pae::Pdpt;

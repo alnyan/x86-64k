@@ -1,7 +1,7 @@
 .global test_handler_ring3_s
 .align 16
 test_handler_ring3_s:
-	mov %rax, %ds:-8(%rsp)
+	mov %rax, %ss:-8(%rsp)
 	mov $0x10, %rax
 	mov %ax, %ss
 
