@@ -14,10 +14,12 @@ namespace pm {
      */
     enum FlagsType: uint64_t {
         /// Page is present
-        F_PRESENT = 5,
+        F_PRESENT = 1 << 0,
         /// Page is writable
         F_RW      = 1 << 1,
         /// Page is accessible from userland
+        F_USER    = 1 << 2,
+        /// Page is large
         F_PS      = 1 << 7
     };
 

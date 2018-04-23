@@ -51,7 +51,7 @@ void pm::Pml4::map(pm::AddressType vaddr, pm::AddressType paddr, pm::FlagsType f
             PagedirEntry *pd = reinterpret_cast<PagedirEntry *>(pdaddr);
 
             pd[pdi] = paddr | flags | pm::FlagsType::F_PRESENT | pm::FlagsType::F_PS;
-            pdpt[pdpti] = pdaddr | pm::FlagsType::F_PRESENT | pm::FlagsType::F_RW;
+            pdpt[pdpti] = pdaddr | pm::FlagsType::F_PRESENT | pm::FlagsType::F_USER | pm::FlagsType::F_RW;
             incRefs(pdaddr);
             incRefs(reinterpret_cast<uintptr_t>(pdpt));
         }
@@ -64,8 +64,8 @@ void pm::Pml4::map(pm::AddressType vaddr, pm::AddressType paddr, pm::FlagsType f
         PagedirEntry *pd = reinterpret_cast<PagedirEntry *>(pdaddr);
 
         pd[pdi] = paddr | flags | pm::FlagsType::F_PRESENT | pm::FlagsType::F_PS;
-        pdpt[pdpti] = pdaddr | pm::FlagsType::F_PRESENT | pm::FlagsType::F_RW;
-        m_entries[pml4i] = pdptaddr | pm::FlagsType::F_PRESENT | pm::FlagsType::F_RW;
+        pdpt[pdpti] = pdaddr | pm::FlagsType::F_PRESENT | pm::FlagsType::F_USER | pm::FlagsType::F_RW;
+        m_entries[pml4i] = pdptaddr | pm::FlagsType::F_PRESENT | pm::FlagsType::F_USER | pm::FlagsType::F_RW;
         incRefs(pdaddr);
         incRefs(pdptaddr);
     }
