@@ -8,7 +8,11 @@
 #define PM_PDPTI(vaddr) (((vaddr) >> 30) & 0x1FF)
 #define PM_PDI(vaddr) (((vaddr) >> 21) & 0x1FF)
 #define PM_4K_ALIGN(addr) ((addr) & ~0xFFF)
+#define PM_4K_LOWER(addr) ((addr) & 0xFFF)
+#define PM_4K_ALIGNED(addr) (!PM_4K_LOWER(addr))
 #define PM_2M_ALIGN(addr) (((addr) & ~0x1FFFFF))
+#define PM_2M_LOWER(addr) ((addr) & 0x1FFFFF)
+#define PM_2M_ALIGNED(addr) (!PM_2M_LOWER(addr))
 #define PM_MAKEADDR(pml4i, pdpti, pdi, off) (((pml4i) << 39) | ((pdpti) << 30) | ((pdi) << 21) | (off))
 
 namespace pm {

@@ -6,7 +6,8 @@
 
 #define KERNEL_LOCATION 0x400000
 #define PM_TRACKING_INDEX(addr) (static_cast<uintptr_t>(addr) >> 18)
-#define PM_TRACKING_BIT(addr)   (static_cast<uintptr_t>(1) << ((static_cast<uintptr_t>(addr) >> 12) & 0x3F))
+#define PM_TRACKING_BIT_INDEX(addr)   (((static_cast<uintptr_t>(addr) >> 12) & 0x3F))
+#define PM_TRACKING_BIT(addr)   (static_cast<uintptr_t>(1) << PM_TRACKING_BIT_INDEX(addr))
 #define PM_REFCOUNT_INDEX(addr) (static_cast<uintptr_t>(addr) >> 12)
 
 static range<uintptr_t> m_pagingStructureRange;
@@ -25,8 +26,8 @@ void pm::Pml4::map(pm::AddressType vaddr, pm::AddressType paddr, pm::FlagsType f
     debug::printf("pm::map(%la) %la -> %la w/ flags %x\n", this, vaddr, paddr, flags);
 
     // Make sure addresses are 2MiB-aligned
-    assert(!(vaddr & 0x1FFFFF));
-    assert(!(paddr & 0x1FFFFF));
+    assert(PM_2M_ALIGNED(vaddr));
+    assert(PM_2M_ALIGNED(paddr));
 
     size_t pml4i = PM_PML4I(vaddr);
     size_t pdpti = PM_PDPTI(vaddr);
@@ -77,8 +78,8 @@ option<uintptr_t> pm::Pml4::get(pm::AddressType vaddrFull) const {
     debug::printf("pm::get(%la) %la\n", this, vaddrFull);
 
     // Extract page-part and offset-part of the address
-    uintptr_t vaddr = vaddrFull & ~0x1FFFFF;
-    uintptr_t low = vaddrFull & 0x1FFFFF;
+    uintptr_t vaddr = PM_2M_ALIGN(vaddrFull);
+    uintptr_t low = PM_2M_LOWER(vaddrFull);
 
     size_t pml4i = PM_PML4I(vaddr);
     size_t pdpti = PM_PDPTI(vaddr);
@@ -103,7 +104,7 @@ option<uintptr_t> pm::Pml4::get(pm::AddressType vaddrFull) const {
 
 result pm::Pml4::unmap(pm::AddressType vaddr) {
     debug::printf("pm::unmap(%la) %la\n", this, vaddr);
-    assert(!(vaddr & 0x1FFFFF));
+    assert(PM_2M_ALIGNED(vaddr));
 
     size_t pml4i = PM_PML4I(vaddr);
     size_t pdpti = PM_PDPTI(vaddr);
@@ -187,7 +188,7 @@ void pm::dumpAlloc() {
         uintptr_t bit = PM_TRACKING_BIT(i - m_pagingStructureRange.start);
 
         if (m_pagingTrackingStructure[idx] & bit) {
-            debug::printf(" * (%lu:%lu) %la\n", idx, ((i - m_pagingStructureRange.start) >> 12) & 0x3F, i);
+            debug::printf(" * (%lu:%lu) %la\n", idx, PM_TRACKING_BIT_INDEX(i - m_pagingStructureRange.start), i);
         }
     }
 }
@@ -244,7 +245,7 @@ pm::RefcountType pm::incRefs(uintptr_t addr) {
     debug::printf("pm::++ %la\n", addr);
 
     assert(m_pagingStructureRange.contains(addr));
-    assert(!(addr & 0xFFF));
+    assert(PM_4K_ALIGNED(addr));
 
     uintptr_t idx = PM_REFCOUNT_INDEX(addr - m_pagingStructureRange.start);
 
@@ -255,7 +256,7 @@ pm::RefcountType pm::decRefs(uintptr_t addr) {
     debug::printf("pm::-- %la\n", addr);
 
     assert(m_pagingStructureRange.contains(addr));
-    assert(!(addr & 0xFFF));
+    assert(PM_4K_ALIGNED(addr));
 
     uintptr_t idx = PM_REFCOUNT_INDEX(addr - m_pagingStructureRange.start);
 
@@ -282,7 +283,7 @@ void pm::retainLoaderPaging(const LoaderData *loaderData) {
     uintptr_t expandDelta = KERNEL_LOCATION - m_pagingStructureRange.end;
     uintptr_t trackingDelta = (expandDelta >> 18) * 8;
     uintptr_t trackingOld = ((m_pagingStructureRange.end - m_pagingStructureRange.start) >> 18) * 8;
-    uintptr_t trackingAddr = (KERNEL_LOCATION - trackingDelta - trackingOld) & ~0xFFF;
+    uintptr_t trackingAddr = PM_4K_ALIGN(KERNEL_LOCATION - trackingDelta - trackingOld);
     size_t refcountSize = ((KERNEL_LOCATION - m_pagingStructureRange.start) / 0x1000) * sizeof(pm::RefcountType);
     uintptr_t refcountAddr = trackingAddr + trackingDelta + trackingOld;
 
@@ -331,7 +332,7 @@ void pm::retainLoaderPaging(const LoaderData *loaderData) {
     }
 
     // 4. dump allocation map
-    m_pagingStructureRange.end = trackingAddr & ~0xFFF;
+    m_pagingStructureRange.end = PM_4K_ALIGN(trackingAddr);
     dumpAlloc();
 
     // 5. set current paging structure
