@@ -23,20 +23,22 @@ pm::Pml4::Pml4() {
 
 void pm::Pml4::map(pm::AddressType vaddr, pm::AddressType paddr, pm::FlagsType flags) {
     debug::printf("pm::map(%la) %la -> %la w/ flags %x\n", this, vaddr, paddr, flags);
+
+    // Make sure addresses are 2MiB-aligned
     assert(!(vaddr & 0x1FFFFF));
     assert(!(paddr & 0x1FFFFF));
 
-    size_t pml4i = vaddr >> 39;
-    size_t pdpti = (vaddr >> 30) & 0x1FF;
-    size_t pdi = (vaddr >> 21) & 0x1FF;
+    size_t pml4i = PM_PML4I(vaddr);
+    size_t pdpti = PM_PDPTI(vaddr);
+    size_t pdi = PM_PDI(vaddr);
     
     if (m_entries[pml4i] & pm::FlagsType::F_PRESENT) {
         Pml4Entry pml4e = m_entries[pml4i];
-        PdptEntry *pdpt = reinterpret_cast<PdptEntry *>(pml4e & ~0xFFF);
+        PdptEntry *pdpt = reinterpret_cast<PdptEntry *>(PM_4K_ALIGN(pml4e));
 
         if (pdpt[pdpti] & pm::FlagsType::F_PRESENT) {
             PdptEntry pdpte = pdpt[pdpti];
-            PagedirEntry *pd = reinterpret_cast<PagedirEntry *>(pdpte & ~0xFFF);
+            PagedirEntry *pd = reinterpret_cast<PagedirEntry *>(PM_4K_ALIGN(pdpte));
 
             if (pd[pdi] & pm::FlagsType::F_PRESENT) {
                 panic_msg("Entry is already present\n");
@@ -73,23 +75,25 @@ void pm::Pml4::map(pm::AddressType vaddr, pm::AddressType paddr, pm::FlagsType f
 
 option<uintptr_t> pm::Pml4::get(pm::AddressType vaddrFull) const {
     debug::printf("pm::get(%la) %la\n", this, vaddrFull);
+
+    // Extract page-part and offset-part of the address
     uintptr_t vaddr = vaddrFull & ~0x1FFFFF;
     uintptr_t low = vaddrFull & 0x1FFFFF;
 
-    size_t pml4i = vaddr >> 39;
-    size_t pdpti = (vaddr >> 30) & 0x1FF;
-    size_t pdi = (vaddr >> 21) & 0x1FF;
+    size_t pml4i = PM_PML4I(vaddr);
+    size_t pdpti = PM_PDPTI(vaddr);
+    size_t pdi = PM_PDI(vaddr);
 
     if (m_entries[pml4i] & pm::FlagsType::F_PRESENT) {
         Pml4Entry pml4e = m_entries[pml4i];
-        PdptEntry *pdpt = reinterpret_cast<PdptEntry *>(pml4e & ~0xFFF);
+        PdptEntry *pdpt = reinterpret_cast<PdptEntry *>(PM_4K_ALIGN(pml4e));
 
         if (pdpt[pdpti] & pm::FlagsType::F_PRESENT) {
             PdptEntry pdpte = pdpt[pdpti];
-            PagedirEntry *pd = reinterpret_cast<PagedirEntry *>(pdpte & ~0xFFF);
+            PagedirEntry *pd = reinterpret_cast<PagedirEntry *>(PM_4K_ALIGN(pdpte));
 
             if (pd[pdi] & pm::FlagsType::F_PRESENT) {
-                return option<uintptr_t>((pd[pdi] & ~0x1FFFFF) | low);
+                return option<uintptr_t>(PM_2M_ALIGN(pd[pdi]) | low);
             }
         }
     }
@@ -101,19 +105,19 @@ result pm::Pml4::unmap(pm::AddressType vaddr) {
     debug::printf("pm::unmap(%la) %la\n", this, vaddr);
     assert(!(vaddr & 0x1FFFFF));
 
-    size_t pml4i = vaddr >> 39;
-    size_t pdpti = (vaddr >> 30) & 0x1FF;
-    size_t pdi = (vaddr >> 21) & 0x1FF;
+    size_t pml4i = PM_PML4I(vaddr);
+    size_t pdpti = PM_PDPTI(vaddr);
+    size_t pdi = PM_PDI(vaddr);
 
     bool found = false;
 
     if (m_entries[pml4i] & pm::FlagsType::F_PRESENT) {
         Pml4Entry pml4e = m_entries[pml4i];
-        PdptEntry *pdpt = reinterpret_cast<PdptEntry *>(pml4e & ~0xFFF);
+        PdptEntry *pdpt = reinterpret_cast<PdptEntry *>(PM_4K_ALIGN(pml4e));
 
         if (pdpt[pdpti] & pm::FlagsType::F_PRESENT) {
             PdptEntry pdpte = pdpt[pdpti];
-            PagedirEntry *pd = reinterpret_cast<PagedirEntry *>(pdpte & ~0xFFF);
+            PagedirEntry *pd = reinterpret_cast<PagedirEntry *>(PM_4K_ALIGN(pdpte));
 
             bool pdfreed = false;
             if (pd[pdi] & pm::FlagsType::F_PRESENT) {
@@ -145,7 +149,7 @@ void pm::Pml4::dump() {
             continue;
         }
 
-        PdptEntry *pdpt = reinterpret_cast<PdptEntry *>(pml4e & ~0xFFF);
+        PdptEntry *pdpt = reinterpret_cast<PdptEntry *>(PM_4K_ALIGN(pml4e));
 
         for (size_t pdpti = 0; pdpti < 512; ++pdpti) {
             PdptEntry pdpte = pdpt[pdpti];
@@ -154,7 +158,7 @@ void pm::Pml4::dump() {
                 continue;            
             }
 
-            PagedirEntry *pd = reinterpret_cast<PagedirEntry *>(pdpte & ~0xFFF);
+            PagedirEntry *pd = reinterpret_cast<PagedirEntry *>(PM_4K_ALIGN(pdpte));
 
             for (size_t pdi = 0; pdi < 512; ++pdi) {
                 PagedirEntry pde = pd[pdi];
@@ -163,8 +167,8 @@ void pm::Pml4::dump() {
                     continue;
                 }
 
-                pm::AddressType vaddr = (pml4i << 39) | (pdpti << 30) | (pdi << 21);
-                pm::AddressType paddr = pde & ~0xFFF;
+                pm::AddressType vaddr = PM_MAKEADDR(pml4i, pdpti, pdi, 0);
+                pm::AddressType paddr = PM_4K_ALIGN(pde);
 
                 debug::printf(" * %la - %la -> %la - %la\n",
                     vaddr,
