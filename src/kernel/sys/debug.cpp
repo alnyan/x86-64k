@@ -1,7 +1,10 @@
 #include "debug.hpp"
 #include <algo/itoa.hpp>
 #include <algo/memory.hpp>
+#include <dev/io.hpp>
 #include <sys/panic.hpp>
+
+#define BOCHS_CON_PORT 0xe9
 
 devices::CharDevice* s_debug_devs[debug::MAX_DEBUG_DEVICES];
 
@@ -9,6 +12,9 @@ static void broadcast(char ch) {
     for (unsigned i = 0; i < debug::MAX_DEBUG_DEVICES; i++) {
         if (s_debug_devs[i] != nullptr) s_debug_devs[i]->putchar(ch);
     }
+#ifndef NO_BOCHS_BROADCAST
+    io::outb(BOCHS_CON_PORT, ch);
+#endif
 }
 
 void debug::init() {
