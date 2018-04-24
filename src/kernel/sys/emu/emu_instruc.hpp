@@ -1,8 +1,20 @@
 #pragma once
 #include <stdint.h>
+#include <sys/emu/emu16_64.hpp>
+
+using namespace emu;
+
+#define CS cs
+#define DS ds
+#define ES es
+#define SS ss
+#define FS fs
+#define GS gs
 
 #define UNIQUE_RMS(name) { (name), (name), (name), (name), (name), (name), (name), (name) }
-#define SELECTOR_FIXED(selname, argname) static const char *selname(cpu_instruction_t &instr) { return #argname; } 
+#define SELECTOR_SEGMENT_REG(selPrefix, seg) static const char *selPrefix##_nameSelector(cpu_instruction_t &instr) { return #seg; } \
+static cpu_op_argument_value_t selPrefix##_valSelector(Emulator16 *emu, cpu_instruction_t &instr) \
+{ return { true, false, reinterpret_cast<uintptr_t>(&emu->seg), 0, sizeof(uint16_t)}; }
 
 namespace emu {
     namespace instructions {
@@ -96,16 +108,34 @@ namespace emu {
 
         struct cpu_instruction_t;
 
+        struct cpu_op_argument_value_t {
+            bool exists;
+            bool isImmediate;
+            uintptr_t reference;
+            uint32_t immediate;
+            unsigned argumentSize;
+
+            static uint32_t trunc(uint32_t val, unsigned size) {
+                return val & ((1 << (size * 8 - 1)) * 2 + 1);
+            }
+            uint32_t val() { return isImmediate ? immediate : trunc(*reinterpret_cast<uint32_t*>(reference), argumentSize); }
+        };
+
         typedef const char* (*cpu_op_implicit_arg_selector_t)(cpu_instruction_t &instruction); 
+        typedef cpu_op_argument_value_t (*cpu_op_implicit_arg_val_selector_t)(Emulator16 *emu, cpu_instruction_t &instruction); 
+        typedef void (*cpu_op_action_t)(Emulator16 *emu, cpu_instruction_t &instruction, cpu_op_argument_value_t lhs, cpu_op_argument_value_t rhs); 
 
         struct cpu_opcode_t {
             uint8_t higherByte;
             uint8_t lowerByte;
             bool isWide;
             bool treatRepAsRepe;
+            int defaultSegIndex;
             const char *names[8]; // different names for different MOD/RMs
-            cpu_op_implicit_arg_selector_t implicitSelector; // can be nullptr if lhs is explicit
+            cpu_op_implicit_arg_selector_t implicitNameSelector; // can be nullptr if lhs is explicit
+            cpu_op_implicit_arg_val_selector_t implicitValSelector; // can be nullptr if lhs is explicit
             cpu_op_argument_t lhs, rhs;
+            cpu_op_action_t action;
 
             bool requiresModrm() const { return REQUIRES_MODRM(lhs) || REQUIRES_MODRM(rhs); }
             bool requiresImmediate() const { return REQUIRES_IMMEDIATE(lhs) || REQUIRES_IMMEDIATE(rhs); }
@@ -141,5 +171,6 @@ namespace emu {
         const char *registerName(int ix, bool byte, bool opSize);
         const char *segRegisterName(int ix);
         cpu_instruction_t fetch(uint16_t cs, uint32_t inEip, int opcodeCount, const cpu_opcode_t *opcodes);
+        cpu_op_argument_value_t decodeArg(Emulator16 *emu, cpu_instruction_t &instruction, bool rhs);
     }
 }

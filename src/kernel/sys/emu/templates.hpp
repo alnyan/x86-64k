@@ -14,9 +14,9 @@ template <> struct uint_larger_holder_t<uint32_t> { static uint64_t typedValue; 
 template <typename T> using uint_larger_t = decltype(uint_larger_holder_t<T>::typedValue);
 
 template <typename T> struct int_larger_holder_t;
-template <> struct int_larger_holder_t<uint8_t>  { static int16_t typedValue; };
-template <> struct int_larger_holder_t<uint16_t> { static int32_t typedValue; };
-template <> struct int_larger_holder_t<uint32_t> { static int64_t typedValue; };
+template <> struct int_larger_holder_t<int8_t>  { static int16_t typedValue; };
+template <> struct int_larger_holder_t<int16_t> { static int32_t typedValue; };
+template <> struct int_larger_holder_t<int32_t> { static int64_t typedValue; };
 template <typename T> using int_larger_t = decltype(int_larger_holder_t<T>::typedValue);
 
 template <typename T> struct uint_smaller_holder_t;

@@ -47,66 +47,92 @@ void Emulator16::poked(uint16_t segment, uint16_t offset, uint32_t value) { mm::
 #define REGNAME16_32(regn) REGNAME16_32_ ## regn
 
 #define NO_ARG_SELECTOR nullptr
+#define NO_VAL_SELECTOR nullptr
+#define NO_ACTION nullptr
 
-SELECTOR_FIXED(op_es_selector, ES)
-SELECTOR_FIXED(op_ds_selector, DS)
+SELECTOR_SEGMENT_REG(op_es, ES)
+SELECTOR_SEGMENT_REG(op_ds, DS)
 
-static const char *op_mov_r_i_selector(cpu_instruction_t &instruction) {
+static const char *op_mov_r_i_nameSelector(cpu_instruction_t &instruction) {
     return registerName(instruction.opcode & 7, !(instruction.opcode & 8), instruction.operandSizePrefix);
 }
 
-static const char *op_mov_sreg_rm16_selector(cpu_instruction_t &instruction) {
+static cpu_op_argument_value_t op_mov_r_i_valSelector(Emulator16 *emu, cpu_instruction_t &instruction) {
+    unsigned size = instruction.opcode & 8 ? (instruction.operandSizePrefix ? sizeof(uint32_t) : sizeof(uint16_t)) : sizeof(uint8_t);
+
+    return {true, false, reinterpret_cast<uintptr_t>(emu->regPtrByIx(instruction.opcode & 7)), 0, size};
+}
+
+static const char *op_mov_sreg_rm16_nameSelector(cpu_instruction_t &instruction) {
     return segRegisterName(instruction.modrm.regOrOpcode);
 }
 
+static cpu_op_argument_value_t op_mov_sreg_rm16_valSelector(Emulator16 *emu, cpu_instruction_t &instruction) {
+    return {true, false, reinterpret_cast<uintptr_t>(emu->regPtrByIx(instruction.modrm.regOrOpcode)), 0, sizeof(uint16_t)};
+}
+
 #define MOV_OPCODE_I8(regn) \
-    { 0xB0 + regn, 0, SHORT, NOPREFIX, UNIQUE_RMS("MOV"), op_mov_r_i_selector, CPU_OP_ARGUMENT_IMPLICIT, CPU_OP_ARGUMENT_IMM8 }
+    { 0xB0 + regn, 0, SHORT, NOPREFIX, DS_INDEX, UNIQUE_RMS("MOV"), \
+        op_mov_r_i_nameSelector, op_mov_r_i_valSelector, CPU_OP_ARGUMENT_IMPLICIT, CPU_OP_ARGUMENT_IMM8, NO_ACTION }
 
 #define MOV_OPCODE_I16_32(regn) \
-    { 0xB8 + regn, 0, SHORT, NOPREFIX, UNIQUE_RMS("MOV"), op_mov_r_i_selector, CPU_OP_ARGUMENT_IMPLICIT, CPU_OP_ARGUMENT_IMM16_32 }
+    { 0xB8 + regn, 0, SHORT, NOPREFIX, DS_INDEX, UNIQUE_RMS("MOV"), \
+        op_mov_r_i_nameSelector, op_mov_r_i_valSelector, CPU_OP_ARGUMENT_IMPLICIT, CPU_OP_ARGUMENT_IMM16_32, NO_ACTION }
+
+void op_generic_alu_action(Emulator16 *emu, cpu_instruction_t &instruction, cpu_op_argument_value_t lhs, cpu_op_argument_value_t rhs) {
+    switch (lhs.argumentSize) {
+        case 1: emu->eflags = sub<uint8_t>(lhs.val(), rhs.val(), static_cast<alu_flags_t>(emu->eflags)).newFlags; return;
+        case 2: emu->eflags = sub<uint16_t>(lhs.val(), rhs.val(), static_cast<alu_flags_t>(emu->eflags)).newFlags; return;
+        case 4: emu->eflags = sub<uint32_t>(lhs.val(), rhs.val(), static_cast<alu_flags_t>(emu->eflags)).newFlags; return;
+    }
+    debug::printf("invalid lhs arg size: %d", lhs.argumentSize);
+    panic();
+}
 
 cpu_opcode_t opcodes[] = {
-    { 0x06, 0, SHORT, NOPREFIX, UNIQUE_RMS("PUSH"), op_es_selector,
-        CPU_OP_ARGUMENT_IMPLICIT, CPU_OP_ARGUMENT_NONE },
+    { 0x06, 0, SHORT, NOPREFIX, NOT_INDEXED, UNIQUE_RMS("PUSH"), op_es_nameSelector, op_es_valSelector,
+        CPU_OP_ARGUMENT_IMPLICIT, CPU_OP_ARGUMENT_NONE, NO_ACTION },
 
-    { 0x07, 0, SHORT, NOPREFIX, UNIQUE_RMS("POP"), op_es_selector,
-        CPU_OP_ARGUMENT_IMPLICIT, CPU_OP_ARGUMENT_NONE },
+    { 0x07, 0, SHORT, NOPREFIX, NOT_INDEXED, UNIQUE_RMS("POP"), op_es_nameSelector, op_es_valSelector,
+        CPU_OP_ARGUMENT_IMPLICIT, CPU_OP_ARGUMENT_NONE, NO_ACTION },
 
-    { 0x1E, 0, SHORT, NOPREFIX, UNIQUE_RMS("PUSH"), op_ds_selector,
-        CPU_OP_ARGUMENT_IMPLICIT, CPU_OP_ARGUMENT_NONE },
+    { 0x1E, 0, SHORT, NOPREFIX, NOT_INDEXED, UNIQUE_RMS("PUSH"), op_ds_nameSelector, op_ds_valSelector,
+        CPU_OP_ARGUMENT_IMPLICIT, CPU_OP_ARGUMENT_NONE, NO_ACTION },
 
-    { 0x1f, 0, SHORT, NOPREFIX, UNIQUE_RMS("POP"), op_ds_selector,
-        CPU_OP_ARGUMENT_IMPLICIT, CPU_OP_ARGUMENT_NONE },
+    { 0x1f, 0, SHORT, NOPREFIX, NOT_INDEXED, UNIQUE_RMS("POP"), op_ds_nameSelector, op_ds_valSelector,
+        CPU_OP_ARGUMENT_IMPLICIT, CPU_OP_ARGUMENT_NONE, NO_ACTION },
 
-    { 0x3C, 0, SHORT, NOPREFIX, UNIQUE_RMS("CMP"), NO_ARG_SELECTOR,
-        CPU_OP_ARGUMENT_AL, CPU_OP_ARGUMENT_IMM8 },
+    { 0x3C, 0, SHORT, NOPREFIX, DS_INDEX, UNIQUE_RMS("CMP"), NO_ARG_SELECTOR, NO_VAL_SELECTOR,
+        CPU_OP_ARGUMENT_AL, CPU_OP_ARGUMENT_IMM8, NO_ACTION },
 
-    { 0x3D, 0, SHORT, NOPREFIX, UNIQUE_RMS("CMP"), NO_ARG_SELECTOR,
-        CPU_OP_ARGUMENT_VAX, CPU_OP_ARGUMENT_IMM16_32 },
+    { 0x3D, 0, SHORT, NOPREFIX, DS_INDEX, UNIQUE_RMS("CMP"), NO_ARG_SELECTOR, NO_VAL_SELECTOR,
+        CPU_OP_ARGUMENT_VAX, CPU_OP_ARGUMENT_IMM16_32, NO_ACTION },
 
-    { 0x60, 0, SHORT, NOPREFIX, UNIQUE_RMS("PUSHA"), NO_ARG_SELECTOR,
-        CPU_OP_ARGUMENT_NONE, CPU_OP_ARGUMENT_NONE },
+    { 0x60, 0, SHORT, NOPREFIX, NOT_INDEXED, UNIQUE_RMS("PUSHA"), NO_ARG_SELECTOR, NO_VAL_SELECTOR,
+        CPU_OP_ARGUMENT_NONE, CPU_OP_ARGUMENT_NONE, NO_ACTION },
 
-    { 0x61, 0, SHORT, NOPREFIX, UNIQUE_RMS("POPA"), NO_ARG_SELECTOR,
-        CPU_OP_ARGUMENT_NONE, CPU_OP_ARGUMENT_NONE },
+    { 0x61, 0, SHORT, NOPREFIX, NOT_INDEXED, UNIQUE_RMS("POPA"), NO_ARG_SELECTOR, NO_VAL_SELECTOR,
+        CPU_OP_ARGUMENT_NONE, CPU_OP_ARGUMENT_NONE, NO_ACTION },
 
-    { 0x74, 0, SHORT, NOPREFIX, UNIQUE_RMS("JZ"), NO_ARG_SELECTOR,
-        CPU_OP_ARGUMENT_REL8, CPU_OP_ARGUMENT_NONE },
+    { 0x74, 0, SHORT, NOPREFIX, CS_INDEX, UNIQUE_RMS("JZ"), NO_ARG_SELECTOR, NO_VAL_SELECTOR,
+        CPU_OP_ARGUMENT_REL8, CPU_OP_ARGUMENT_NONE, NO_ACTION },
 
-    { 0x75, 0, SHORT, NOPREFIX, UNIQUE_RMS("JNZ"), NO_ARG_SELECTOR,
-        CPU_OP_ARGUMENT_REL8, CPU_OP_ARGUMENT_NONE },
+    { 0x75, 0, SHORT, NOPREFIX, CS_INDEX, UNIQUE_RMS("JNZ"), NO_ARG_SELECTOR, NO_VAL_SELECTOR,
+        CPU_OP_ARGUMENT_REL8, CPU_OP_ARGUMENT_NONE, [](auto emu, auto instruction, auto lhs, auto rhs) -> auto {
+            if (!(emu->eflags & ALU_FLAG_ZERO)) emu->eip = lhs.val();
+        } },
 
-    { 0x80, 0, SHORT, NOPREFIX, ALUOP, NO_ARG_SELECTOR,
-        CPU_OP_ARGUMENT_RM8, CPU_OP_ARGUMENT_IMM8 },
+    { 0x80, 0, SHORT, NOPREFIX, DS_INDEX, ALUOP, NO_ARG_SELECTOR, NO_VAL_SELECTOR,
+        CPU_OP_ARGUMENT_RM8, CPU_OP_ARGUMENT_IMM8, op_generic_alu_action },
 
-    { 0x8E, 0, SHORT, NOPREFIX, UNIQUE_RMS("MOV"), op_mov_sreg_rm16_selector, 
-        CPU_OP_ARGUMENT_IMPLICIT, CPU_OP_ARGUMENT_RM16_32 }, /* TODO: only 16bit arg */
+    { 0x8E, 0, SHORT, NOPREFIX, DS_INDEX, UNIQUE_RMS("MOV"), op_mov_sreg_rm16_nameSelector, op_mov_sreg_rm16_valSelector,
+        CPU_OP_ARGUMENT_IMPLICIT, CPU_OP_ARGUMENT_RM16_32, NO_ACTION }, /* TODO: only 16bit arg */
 
-    { 0x9c, 0, SHORT, NOPREFIX, UNIQUE_RMS("PUSHF"), NO_ARG_SELECTOR,
-        CPU_OP_ARGUMENT_NONE, CPU_OP_ARGUMENT_NONE },
+    { 0x9c, 0, SHORT, NOPREFIX, NOT_INDEXED, UNIQUE_RMS("PUSHF"), NO_ARG_SELECTOR, NO_VAL_SELECTOR,
+        CPU_OP_ARGUMENT_NONE, CPU_OP_ARGUMENT_NONE, [](auto emu, auto instruction, auto lhs, auto rhs) -> auto { emu->pushWordOnStack(emu->eflags); } },
 
-    { 0x9d, 0, SHORT, NOPREFIX, UNIQUE_RMS("POPF"), NO_ARG_SELECTOR,
-        CPU_OP_ARGUMENT_NONE, CPU_OP_ARGUMENT_NONE },
+    { 0x9d, 0, SHORT, NOPREFIX, NOT_INDEXED, UNIQUE_RMS("POPF"), NO_ARG_SELECTOR, NO_VAL_SELECTOR,
+        CPU_OP_ARGUMENT_NONE, CPU_OP_ARGUMENT_NONE, NO_ACTION },
 
     MOV_OPCODE_I8(0), MOV_OPCODE_I8(1), MOV_OPCODE_I8(2), MOV_OPCODE_I8(3),
     MOV_OPCODE_I8(4), MOV_OPCODE_I8(5), MOV_OPCODE_I8(6), MOV_OPCODE_I8(7),
@@ -114,20 +140,35 @@ cpu_opcode_t opcodes[] = {
     MOV_OPCODE_I16_32(0), MOV_OPCODE_I16_32(1), MOV_OPCODE_I16_32(2), MOV_OPCODE_I16_32(3),
     MOV_OPCODE_I16_32(4), MOV_OPCODE_I16_32(5), MOV_OPCODE_I16_32(6), MOV_OPCODE_I16_32(7),
 
-    { 0xcf, 0, SHORT, NOPREFIX, UNIQUE_RMS("IRET"), NO_ARG_SELECTOR,
-        CPU_OP_ARGUMENT_NONE, CPU_OP_ARGUMENT_NONE },
+    { 0xcf, 0, SHORT, NOPREFIX, NOT_INDEXED, UNIQUE_RMS("IRET"), NO_ARG_SELECTOR, NO_VAL_SELECTOR,
+        CPU_OP_ARGUMENT_NONE, CPU_OP_ARGUMENT_NONE, NO_ACTION },
 
-    { 0xe8, 0, SHORT, NOPREFIX, UNIQUE_RMS("CALL"), NO_ARG_SELECTOR,
-        CPU_OP_ARGUMENT_REL16_32, CPU_OP_ARGUMENT_NONE },
+    { 0xe8, 0, SHORT, NOPREFIX, CS_INDEX, UNIQUE_RMS("CALL"), NO_ARG_SELECTOR, NO_VAL_SELECTOR,
+        CPU_OP_ARGUMENT_REL16_32, CPU_OP_ARGUMENT_NONE, NO_ACTION},
         
-    { 0xe9, 0, SHORT, NOPREFIX, UNIQUE_RMS("JMP"), NO_ARG_SELECTOR,
-        CPU_OP_ARGUMENT_REL16_32, CPU_OP_ARGUMENT_NONE },
+    { 0xe9, 0, SHORT, NOPREFIX, CS_INDEX, UNIQUE_RMS("JMP"), NO_ARG_SELECTOR, NO_VAL_SELECTOR,
+        CPU_OP_ARGUMENT_REL16_32, CPU_OP_ARGUMENT_NONE, NO_ACTION },
         
-    { 0xeb, 0, SHORT, NOPREFIX, UNIQUE_RMS("JMP"), NO_ARG_SELECTOR,
-        CPU_OP_ARGUMENT_REL8, CPU_OP_ARGUMENT_NONE },
+    { 0xeb, 0, SHORT, NOPREFIX, CS_INDEX, UNIQUE_RMS("JMP"), NO_ARG_SELECTOR, NO_VAL_SELECTOR,
+        CPU_OP_ARGUMENT_REL8, CPU_OP_ARGUMENT_NONE, NO_ACTION },
+        
+    { 0xfa, 0, SHORT, NOPREFIX, NOT_INDEXED, UNIQUE_RMS("CLI"), NO_ARG_SELECTOR, NO_VAL_SELECTOR,
+        CPU_OP_ARGUMENT_NONE, CPU_OP_ARGUMENT_NONE, [](auto emu, auto instruction, auto lhs, auto rhs) -> auto {} },
+        
+    /* 0xfb, 0, SHORT, NOPREFIX, NOT_INDEXED, UNIQUE_RMS("STI"), NO_ARG_SELECTOR, NO_VAL_SELECTOR,
+        CPU_OP_ARGUMENT_NONE, CPU_OP_ARGUMENT_NONE, NO_ACTION },*/
+        
+    { 0xfc, 0, SHORT, NOPREFIX, NOT_INDEXED, UNIQUE_RMS("CLD"), NO_ARG_SELECTOR, NO_VAL_SELECTOR,
+        CPU_OP_ARGUMENT_NONE, CPU_OP_ARGUMENT_NONE, [](auto emu, auto instruction, auto lhs, auto rhs) -> auto {} },
+        
+    /*{ 0xfd, 0, SHORT, NOPREFIX, NOT_INDEXED, UNIQUE_RMS("STD"), NO_ARG_SELECTOR, NO_VAL_SELECTOR,
+        CPU_OP_ARGUMENT_NONE, CPU_OP_ARGUMENT_NONE, NO_ACTION }*/
 };
 
 void Emulator16::step() {
     auto instr = fetch(cs, eip, sizeof(opcodes) / sizeof(cpu_opcode_t), opcodes);
+    if (instr.opcodeDef.action == nullptr) panic_msg("opcodeDef.action == nullptr");
     eip = instr.nextEip;
+    instr.opcodeDef.action(this, instr, decodeArg(this, instr, false), decodeArg(this, instr, true));
+    debug::printf("eip: %x\n", eip);
 }
