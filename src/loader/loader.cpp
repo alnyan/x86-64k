@@ -20,6 +20,7 @@ static constexpr uintptr_t m_loadAddr = 0x400000; // Real address at which kerne
 pm::pae::Pdpt *pdp;
 
 void load_elf(uintptr_t loadAddr, uintptr_t mod_start, size_t mod_size) {
+    debug::printf("kernel located at %a\n", mod_start);
     elf::Elf64 *elf = reinterpret_cast<elf::Elf64 *>(mod_start);
     assert(elf->isValid());
     assert(elf->target() == ELFCLASS64);
@@ -32,6 +33,14 @@ void load_elf(uintptr_t loadAddr, uintptr_t mod_start, size_t mod_size) {
 
     // TODO: make sure entry is 2MB-page-aligned
     uint64_t entry64 = elf->entry();
+    uint64_t vma = 0x400000;
+
+    pdp->map(vma,            0x1000000, 0x86); // TODO: map more pages if needed
+    pdp->map(vma + 0x200000, 0x1200000, 0x86); // TODO: map more pages if needed
+    pdp->map(vma + 0x400000, 0x1400000, 0x86); // TODO: map more pages if needed
+    pdp->map(vma + 0x600000, 0x1600000, 0x86); // TODO: map more pages if needed
+    pdp->map(vma + 0x800000, 0x1800000, 0x86); // TODO: map more pages if needed
+    pdp->apply();
 
     for (size_t i = 0; i < ns; ++i) {
         const Elf64_Phdr *programHeader = elf->programHeader(i);
@@ -50,6 +59,7 @@ void load_elf(uintptr_t loadAddr, uintptr_t mod_start, size_t mod_size) {
             uint64_t memsz64 = programHeader->p_memsz;
             uint32_t memsz32 = programHeader->p_memsz;
 
+            const void *d = reinterpret_cast<const void *>(mod_start + off32);
             const void *l = reinterpret_cast<const void *>(mod_start + off32);
 
             // Sanity check: only one page is mapped now
@@ -59,17 +69,18 @@ void load_elf(uintptr_t loadAddr, uintptr_t mod_start, size_t mod_size) {
 
             uint32_t paddrPage = paddr32 & (-0x200000);
 
-            debug::printf("page-aligned: %a\n", paddrPage);
-            if (paddrPage >= loadAddr) {
-                pdp->map(0x00400000, paddrPage, 0x86);
-                pdp->apply();
-            } else {
-                panic_msg("Physical address is too low\n");
-            }
+            // debug::printf("page-aligned: %a\n", paddrPage);
+            // if (true||paddrPage >= loadAddr) {
+            //     pdp->map(0x00400000, paddrPage, 0x86);
+            //     pdp->apply();
+            // } else {
+            //     panic_msg("Physical address is too low\n");
+            // }
 
-            memcpy(reinterpret_cast<void *>(paddr32 - paddrPage + 0x400000), l, size32);
+            memset(reinterpret_cast<void*>(vaddr32), 0, size32);
+            memcpy(reinterpret_cast<void *>(vaddr32), l, size32);
 
-            pdp->unmap(0x400000);
+            // pdp->unmap(0x400000);
             pdp->apply();
         }
     }
@@ -79,7 +90,11 @@ void load_elf(uintptr_t loadAddr, uintptr_t mod_start, size_t mod_size) {
     pm::pm64::Pml4 *pml = new (0x100000) pm::pm64::Pml4;
     pml->map(0x0, 0x0, 0x86);
     pml->map(0x200000, 0x200000, 0x86);
-    pml->map(entry64, loadAddr, 0x86); // TODO: map more pages if needed
+    pml->map(vma,            0x1000000, 0x86); // TODO: map more pages if needed
+    pml->map(vma + 0x200000, 0x1200000, 0x86); // TODO: map more pages if needed
+    pml->map(vma + 0x400000, 0x1400000, 0x86); // TODO: map more pages if needed
+    pml->map(vma + 0x600000, 0x1600000, 0x86); // TODO: map more pages if needed
+    pml->map(vma + 0x800000, 0x1800000, 0x86); // TODO: map more pages if needed
     pml->apply();
 
     debug::printf("Entry: %A\n", entry64);

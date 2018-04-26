@@ -11,6 +11,7 @@
 #include <dev/vesa.hpp>
 #include <sys/isr.hpp>
 #include <sys/gdt.hpp>
+#include <iostream>
 
 void validateLoaderData(LoaderData *data) {
     uint32_t sum = 0;
@@ -29,6 +30,8 @@ extern "C" void __cxa_atexit() {
 extern "C" void __cxa_pure_virtual() {
     panic_msg("__cxa_pure_virtual: pure virtual call encountered.");
 }
+
+extern "C" void _init();
 
 extern "C" void kernel_main(LoaderData *loaderData) {
     debug::init();
@@ -53,7 +56,12 @@ extern "C" void kernel_main(LoaderData *loaderData) {
         reinterpret_cast<uint8_t*>(heap::kernelHeap.allocAligned(taskswitchStackSize, sizeof(uintptr_t)).orPanic("Couldn't allocate task-switch stack"));
     gdt::setTaskswitchStack(taskswitchStack + taskswitchStackSize /* passing upper bound */);
 
-    vesa::init();
+    // vesa::init();
+
+    
+    _init();
+
+    std::cout << "shit printing with <iostream>\n";
 
     isr_setup_handlers();
     debug::printf("firing c8!\n");

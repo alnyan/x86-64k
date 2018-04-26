@@ -23,7 +23,7 @@ namespace mm {
 // FIXME: only 4GiB
 #define PHYS_SIZE 0x1000000000
 
-static const range<pm::AddressType> m_virtualAllocRange(0x80000000, 0xFFFF00000000);
+static range<pm::AddressType> m_virtualAllocRange(0x80000000, 0xFFFF00000000);
 static mm::PhysicalPageTrackingType m_physicalTrackingStructure[PHYS_SIZE >> 24];
 
 option<mm::AddressType> findVirtualRange(pm::Pml4 *p, size_t pageCount, mm::VirtualAllocFlagsType flags) {
@@ -91,6 +91,8 @@ result allocPhysicalPages(mm::PhysicalPageType *pages, size_t count, mm::Physica
 void freePhysicalPages(mm::PhysicalPageType *pages, size_t count, mm::PhysicalAllocFlagsType flags);
 
 void mm::init() {
+    range<pm::AddressType> x(0x80000000, 0xFFFF00000000);
+    m_virtualAllocRange = x;
     memset(m_physicalTrackingStructure, 0, sizeof(m_physicalTrackingStructure));
 }
 

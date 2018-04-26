@@ -1,9 +1,10 @@
 #pragma once
 #include <sys/panic.hpp>
+#include <new>
 
-inline void *operator new(size_t v, void *p) throw() {
+/*inline void *operator new(size_t v, void *p) throw() {
     return p;
-}
+}*/
 
 template<typename T> class option {
 public:
