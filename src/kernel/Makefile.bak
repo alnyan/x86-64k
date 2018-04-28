@@ -7,9 +7,9 @@ KERNEL_OBJECTS=$(KERNEL_SOURCES_S:%.s=$(BUILD_DIR)/kernel/%.o) $(KERNEL_SOURCES_
 
 KERNEL_CXXFLAGS=-ffreestanding \
 				-ggdb \
-				-I. \
 				-fno-pic \
 				-fno-pie \
+				-I. \
 				-fno-rtti \
 				-fno-exceptions \
 				-Wall \
@@ -17,14 +17,12 @@ KERNEL_CXXFLAGS=-ffreestanding \
 				-Werror \
 				-Wold-style-cast \
 				-Wno-unused-variable \
-				-Wno-unused-but-set-variable \
 				-Wno-unused-parameter \
 				-Wimplicit-fallthrough \
 				-std=c++1z \
 				-mcmodel=large \
 				-mno-red-zone \
-				-static \
-				-z max-page-size=0x1000
+				-static
 
 KERNEL_CXXFLAGS_NOFLOAT= -msoft-float \
 	-mno-mmx \
@@ -36,19 +34,15 @@ KERNEL_ASFLAGS=--64
 KERNEL_LDFLAGS=-nostdlib \
 			   -O0 \
 			   -ggdb \
-                           -Tkernel.lds \
-			   -fno-pic \
-			   -fno-pie \
-			   -ffreestanding \
-			   -mcmodel=large \
-			   -z max-page-size=0x1000
+                           -Tkernel.lds
 
-LD64=$(TOOLCHAIN64)/bin/$(TARGET64)-g++
-AS64=$(TOOLCHAIN64)/bin/$(TARGET64)-as
-CXX64=$(TOOLCHAIN64)/bin/$(TARGET64)-g++
+LD64=ld # $(TOOLCHAIN64)/bin/$(TARGET64)-ld
+AS64=as # $(TOOLCHAIN64)/bin/$(TARGET64)-as
+CXX64=clang++-3.9 # $(TOOLCHAIN64)/bin/$(TARGET64)-g++
 
 KERNEL_CRTBEGIN=$(shell $(CXX64) -print-file-name=crtbegin.o)
 KERNEL_CRTEND=$(shell $(CXX64) -print-file-name=crtend.o)
+KERNEL_LIBGCC=$(shell $(CXX64) -print-file-name=libgcc.a)
 
 DIRS=$(shell dirname $(KERNEL_OBJECTS)) $(BUILD_DIR)/docs/kernel
 
@@ -60,6 +54,14 @@ $(BUILD_DIR)/kernel.elf: mkdirs $(BUILD_DIR)/kernel/crti.o $(BUILD_DIR)/kernel/c
 		$(KERNEL_CRTBEGIN) \
 		$(KERNEL_OBJECTS) \
 		$(KERNEL_CRTEND) \
+		-L $(TOOLCHAIN64)/x86_64-elf/lib \
+		-lc \
+		-lg \
+		-lm \
+		-lnosys \
+		$(KERNEL_LIBGCC) \
+		-lsupc++ \
+		-lc++ \
 		$(BUILD_DIR)/kernel/crtn.o
 
 

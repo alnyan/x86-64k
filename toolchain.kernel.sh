@@ -10,7 +10,7 @@ newlib_version="3.0.0"
 target=x86_64-elf
  
 # The tools will be installed in ~/cross/$target.
-prefix=/opt/x86-64k2
+prefix=$KERNEL_PREFIX
  
 # First check whether the toolchain was already built on a previous run of this script.
 if [ ! -d $prefix ]
@@ -54,10 +54,15 @@ then
  
 	# Build gcc and libgcc.
 	cd /tmp/toolchain/build-gcc
-	/tmp/toolchain/gcc-$gcc_version/configure --target=$target --prefix=$prefix --disable-nls --enable-languages=c,c++ --enable-libstdcxx --without-headers 2>&1
+	/tmp/toolchain/gcc-$gcc_version/configure --target=$target --prefix=$prefix --disable-shared --disable-nls --enable-languages=c,c++ --enable-libstdcxx --without-headers 2>&1
 	make all-gcc 2>&1
 	make install-gcc 2>&1
-	make all-target-libgcc 2>&1
+
+#	make all-target-libgcc CFLAGS_FOR_TARGET='-g -O2 -mcmodel=large -mno-red-zone' 2>&1 || true
+#	# will fail with: cc1: error: code model kernel does not support PIC mode
+#	sed -i 's/PICFLAG/DISABLED_PICFLAG/g' $target/libgcc/Makefile
+#	find $target/libgcc -type f -name "config.cache" -delete
+	make all-target-libgcc CFLAGS_FOR_TARGET='-g -O2 -mcmodel=large -mno-red-zone -fno-pic -fno-pie' 2>&1
 	make install-target-libgcc 2>&1
  
 	# Make sure that our cross compiler will be found by creating links.
@@ -68,14 +73,14 @@ then
 	cd /tmp/toolchain/build-newlib
 	sudo rm -rf *
 	/tmp/toolchain/newlib-$newlib_version/configure --target=$target --prefix=$prefix 2>&1
-	make all 2>&1
+	make all CFLAGS_FOR_TARGET='-g -O2 -mcmodel=large -mno-red-zone -fno-pic -fno-pie' 2>&1
 	make install 2>&1
 	sudo rm -rf *
  
 	# Optional: Build libstdc++. This is done in order to install the freestanding headers for using the C++11, C++14, C++17 standards.
 	cd /tmp/toolchain/build-gcc
-	/tmp/toolchain/gcc-$gcc_version/configure --target=$target --prefix=$prefix --disable-nls --enable-languages=c,c++ --enable-libstdcxx --without-headers --with-newlib 2>&1
-	make all-target-libstdc++-v3 2>&1
+	/tmp/toolchain/gcc-$gcc_version/configure --target=$target --prefix=$prefix --disable-nls --disable-shared --enable-languages=c,c++ --enable-libstdcxx --without-headers --with-newlib 2>&1
+	make all-target-libstdc++-v3 CFLAGS_FOR_TARGET='-g -O2 -mcmodel=large -mno-red-zone -fno-pic -fno-pie' 2>&1
 	make install-target-libstdc++-v3 2>&1
 	sudo rm -rf *
 fi

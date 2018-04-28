@@ -11,7 +11,7 @@
 #include <dev/vesa.hpp>
 #include <sys/isr.hpp>
 #include <sys/gdt.hpp>
-#include <iostream>
+//#include <iostream>
 
 void validateLoaderData(LoaderData *data) {
     uint32_t sum = 0;
@@ -54,14 +54,14 @@ extern "C" void kernel_main(LoaderData *loaderData) {
     const unsigned taskswitchStackSize = 0x10000;
     auto taskswitchStack = 
         reinterpret_cast<uint8_t*>(heap::kernelHeap.allocAligned(taskswitchStackSize, sizeof(uintptr_t)).orPanic("Couldn't allocate task-switch stack"));
-    gdt::setTaskswitchStack(taskswitchStack + taskswitchStackSize /* passing upper bound */);
+    gdt::setTaskswitchStack(taskswitchStack + taskswitchStackSize); // passing upper bound
 
     // vesa::init();
 
     
     _init();
 
-    std::cout << "shit printing with <iostream>\n";
+    //std::cout << "shit printing with <iostream>\n";
 
     isr_setup_handlers();
     debug::printf("firing c8!\n");
@@ -80,7 +80,8 @@ extern "C" void kernel_main(LoaderData *loaderData) {
         "pushq %rax\n"
         "pushfq\n"
         "pushq $0x1b\n"
-        "pushq $1f\n"
+        "movabsq $1f, %rax\n"
+        "pushq %rax\n"
         "iretq\n"
         "1: \n" );
 

@@ -1,4 +1,4 @@
-#include <sys/emu/emu16_64.hpp>
+/*#include <sys/emu/emu16_64.hpp>
 #include <sys/emu/emu_alu.hpp>
 #include <sys/emu/emu_mm.hpp>
 #include <sys/emu/emu_instruc.hpp>
@@ -126,7 +126,7 @@ cpu_opcode_t opcodes[] = {
         CPU_OP_ARGUMENT_RM8, CPU_OP_ARGUMENT_IMM8, op_generic_alu_action },
 
     { 0x8E, 0, SHORT, NOPREFIX, DS_INDEX, UNIQUE_RMS("MOV"), op_mov_sreg_rm16_nameSelector, op_mov_sreg_rm16_valSelector,
-        CPU_OP_ARGUMENT_IMPLICIT, CPU_OP_ARGUMENT_RM16_32, NO_ACTION }, /* TODO: only 16bit arg */
+        CPU_OP_ARGUMENT_IMPLICIT, CPU_OP_ARGUMENT_RM16_32, NO_ACTION }, // TODO: only 16bit arg
 
     { 0x9c, 0, SHORT, NOPREFIX, NOT_INDEXED, UNIQUE_RMS("PUSHF"), NO_ARG_SELECTOR, NO_VAL_SELECTOR,
         CPU_OP_ARGUMENT_NONE, CPU_OP_ARGUMENT_NONE, [](auto emu, auto instruction, auto lhs, auto rhs) -> auto { emu->pushWordOnStack(emu->eflags); } },
@@ -155,14 +155,14 @@ cpu_opcode_t opcodes[] = {
     { 0xfa, 0, SHORT, NOPREFIX, NOT_INDEXED, UNIQUE_RMS("CLI"), NO_ARG_SELECTOR, NO_VAL_SELECTOR,
         CPU_OP_ARGUMENT_NONE, CPU_OP_ARGUMENT_NONE, [](auto emu, auto instruction, auto lhs, auto rhs) -> auto {} },
         
-    /* 0xfb, 0, SHORT, NOPREFIX, NOT_INDEXED, UNIQUE_RMS("STI"), NO_ARG_SELECTOR, NO_VAL_SELECTOR,
-        CPU_OP_ARGUMENT_NONE, CPU_OP_ARGUMENT_NONE, NO_ACTION },*/
+     0xfb, 0, SHORT, NOPREFIX, NOT_INDEXED, UNIQUE_RMS("STI"), NO_ARG_SELECTOR, NO_VAL_SELECTOR,
+        CPU_OP_ARGUMENT_NONE, CPU_OP_ARGUMENT_NONE, NO_ACTION },
         
     { 0xfc, 0, SHORT, NOPREFIX, NOT_INDEXED, UNIQUE_RMS("CLD"), NO_ARG_SELECTOR, NO_VAL_SELECTOR,
         CPU_OP_ARGUMENT_NONE, CPU_OP_ARGUMENT_NONE, [](auto emu, auto instruction, auto lhs, auto rhs) -> auto {} },
         
-    /*{ 0xfd, 0, SHORT, NOPREFIX, NOT_INDEXED, UNIQUE_RMS("STD"), NO_ARG_SELECTOR, NO_VAL_SELECTOR,
-        CPU_OP_ARGUMENT_NONE, CPU_OP_ARGUMENT_NONE, NO_ACTION }*/
+    { 0xfd, 0, SHORT, NOPREFIX, NOT_INDEXED, UNIQUE_RMS("STD"), NO_ARG_SELECTOR, NO_VAL_SELECTOR,
+        CPU_OP_ARGUMENT_NONE, CPU_OP_ARGUMENT_NONE, NO_ACTION }
 };
 
 void Emulator16::step() {
@@ -172,3 +172,4 @@ void Emulator16::step() {
     instr.opcodeDef.action(this, instr, decodeArg(this, instr, false), decodeArg(this, instr, true));
     debug::printf("eip: %x\n", eip);
 }
+*/

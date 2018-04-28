@@ -1,6 +1,6 @@
 ENTRY(kernel_entry)
 SECTIONS {
-    . = 0x400000;
+    . = 0x4000000000;
 
     .text :
 	{

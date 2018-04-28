@@ -18,6 +18,7 @@ debug::SerialDebug::SerialDebug(uint16_t port): m_port{port} {
 void debug::SerialDebug::putc(char c) {
     while (!(io::in<uint8_t>(m_port + 5) & 0x20));
     io::out(m_port, c);
+    io::out(0xe9, c);
 }
 
 void debug::assertFail(const char *file, int line, const char *msg) {

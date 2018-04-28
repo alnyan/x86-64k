@@ -20,7 +20,10 @@ qemu-run: build/image.iso
 	qemu-system-x86_64 -cdrom build/image.iso -m 512 -cpu qemu64,-vmx -serial stdio
 
 qemu-gdb: build/image.iso
-	qemu-system-x86_64 -cdrom build/image.iso -m 512 -cpu qemu64,-vmx -S -s -serial stdio
+	qemu-system-x86_64 -cdrom build/image.iso -m 512 -cpu qemu64,-vmx -S -s -monitor stdio
+
+bochs-run: build/image.iso
+	bochs -f $(BOCHSCONFIG)
 
 clean:
 	rm -rf build

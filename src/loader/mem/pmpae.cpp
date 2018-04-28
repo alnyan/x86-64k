@@ -21,8 +21,10 @@ void pm::pae::Pdpt::map(pm::pae::AddressType vaddr, pm::pae::AddressType paddr, 
 
         pd[pdi] = paddr | flags | 0x81;
     } else {
+        debug::printf("pm::pae::map: allocating pd\n");
         // Allocate pd
         uintptr_t addr = pm::alloc();
+        debug::printf("pm::pae::map: allocated at: %a\n", addr);
         assert(addr != 0xFFFFFFFF);
         PagedirType pd = reinterpret_cast<PagedirType>(addr);
         

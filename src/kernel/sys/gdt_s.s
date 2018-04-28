@@ -5,7 +5,8 @@
 gdt_load:
 	lgdt (%rdi)
 
-	sub $16, %rsp // ljmp is not working in x64
+	sub $16, %rsp 
+	// ljmp is not working in x64
 	movq $8, 8(%rsp)
 	movabsq $gdt_reload, %rax
 	mov %rax, (%rsp)

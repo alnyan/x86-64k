@@ -42,6 +42,6 @@ public:
     }
 
 private:
-    uint8_t m_value[sizeof(T)] alignas(T);
+    uint8_t m_value[sizeof(T)];
     T *m_ptr;
 };

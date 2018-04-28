@@ -26,10 +26,10 @@ struct ivt_entry {
 
 ivt_entry entry;
 
-emu::Emulator16 emulator;
+//emu::Emulator16 emulator;
 
 static void initMore(ivt_entry handler) {
-    printf("vesa: setting mode 0x3, screen should wipe\n");
+/*    printf("vesa: setting mode 0x3, screen should wipe\n");
     
     // using conventional memory for stack
     emulator.ss = 0x8e0;
@@ -50,7 +50,7 @@ static void initMore(ivt_entry handler) {
     do {
         emulator.step();
     } while (((emulator.eip & 0xffff) != RETURN_OFFSET_MAGIC) || (emulator.cs != RETURN_SEGMENT_MAGIC));
-}
+*/}
 
 void vesa::init() {
     printf("vesa: observing IVT\n");

@@ -33,13 +33,15 @@ void load_elf(uintptr_t loadAddr, uintptr_t mod_start, size_t mod_size) {
 
     // TODO: make sure entry is 2MB-page-aligned
     uint64_t entry64 = elf->entry();
-    uint64_t vma = 0x400000;
+    uint64_t vma64 = 0x4000000000;
+    uint64_t vma32 = 0x4000000;
+    uint64_t vmadifference = vma64 - vma32;
 
-    pdp->map(vma,            0x1000000, 0x86); // TODO: map more pages if needed
-    pdp->map(vma + 0x200000, 0x1200000, 0x86); // TODO: map more pages if needed
-    pdp->map(vma + 0x400000, 0x1400000, 0x86); // TODO: map more pages if needed
-    pdp->map(vma + 0x600000, 0x1600000, 0x86); // TODO: map more pages if needed
-    pdp->map(vma + 0x800000, 0x1800000, 0x86); // TODO: map more pages if needed
+    pdp->map(vma32,            0x1000000, 0x86); // TODO: map more pages if needed
+    pdp->map(vma32 + 0x200000, 0x1200000, 0x86); // TODO: map more pages if needed
+    pdp->map(vma32 + 0x400000, 0x1400000, 0x86); // TODO: map more pages if needed
+    pdp->map(vma32 + 0x600000, 0x1600000, 0x86); // TODO: map more pages if needed
+    pdp->map(vma32 + 0x800000, 0x1800000, 0x86); // TODO: map more pages if needed
     pdp->apply();
 
     for (size_t i = 0; i < ns; ++i) {
@@ -59,15 +61,14 @@ void load_elf(uintptr_t loadAddr, uintptr_t mod_start, size_t mod_size) {
             uint64_t memsz64 = programHeader->p_memsz;
             uint32_t memsz32 = programHeader->p_memsz;
 
-            const void *d = reinterpret_cast<const void *>(mod_start + off32);
             const void *l = reinterpret_cast<const void *>(mod_start + off32);
 
             // Sanity check: only one page is mapped now
             assert(memsz32 <= 0x200000);
 
-            debug::printf("paddr32 = %a\n", paddr32);
+            //debug::printf("paddr32 = %a\n", paddr32);
 
-            uint32_t paddrPage = paddr32 & (-0x200000);
+            //uint32_t paddrPage = paddr32 & (-0x200000);
 
             // debug::printf("page-aligned: %a\n", paddrPage);
             // if (true||paddrPage >= loadAddr) {
@@ -77,11 +78,11 @@ void load_elf(uintptr_t loadAddr, uintptr_t mod_start, size_t mod_size) {
             //     panic_msg("Physical address is too low\n");
             // }
 
-            memset(reinterpret_cast<void*>(vaddr32), 0, size32);
-            memcpy(reinterpret_cast<void *>(vaddr32), l, size32);
+            memset(reinterpret_cast<void*>(vaddr64 - vmadifference), 0, size32);
+            memcpy(reinterpret_cast<void *>(vaddr64 - vmadifference), l, size32);
 
             // pdp->unmap(0x400000);
-            pdp->apply();
+            //pdp->apply();
         }
     }
     // Convert pdp to pml4
@@ -90,11 +91,11 @@ void load_elf(uintptr_t loadAddr, uintptr_t mod_start, size_t mod_size) {
     pm::pm64::Pml4 *pml = new (0x100000) pm::pm64::Pml4;
     pml->map(0x0, 0x0, 0x86);
     pml->map(0x200000, 0x200000, 0x86);
-    pml->map(vma,            0x1000000, 0x86); // TODO: map more pages if needed
-    pml->map(vma + 0x200000, 0x1200000, 0x86); // TODO: map more pages if needed
-    pml->map(vma + 0x400000, 0x1400000, 0x86); // TODO: map more pages if needed
-    pml->map(vma + 0x600000, 0x1600000, 0x86); // TODO: map more pages if needed
-    pml->map(vma + 0x800000, 0x1800000, 0x86); // TODO: map more pages if needed
+    pml->map(vma64,            0x1000000, 0x86); // TODO: map more pages if needed
+    pml->map(vma64 + 0x200000, 0x1200000, 0x86); // TODO: map more pages if needed
+    pml->map(vma64 + 0x400000, 0x1400000, 0x86); // TODO: map more pages if needed
+    pml->map(vma64 + 0x600000, 0x1600000, 0x86); // TODO: map more pages if needed
+    pml->map(vma64 + 0x800000, 0x1800000, 0x86); // TODO: map more pages if needed
     pml->apply();
 
     debug::printf("Entry: %A\n", entry64);
