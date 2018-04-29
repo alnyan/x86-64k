@@ -60,6 +60,12 @@ $(BUILD_DIR)/kernel.elf: mkdirs $(BUILD_DIR)/kernel/crti.o $(BUILD_DIR)/kernel/c
 		$(KERNEL_CRTBEGIN) \
 		$(KERNEL_OBJECTS) \
 		$(KERNEL_CRTEND) \
+		-lc \
+		-lm \
+		-lg \
+		-lnosys \
+		-lsupc++ \
+		-lstdc++ \
 		$(BUILD_DIR)/kernel/crtn.o
 
 

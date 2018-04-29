@@ -11,7 +11,7 @@
 #include <dev/vesa.hpp>
 #include <sys/isr.hpp>
 #include <sys/gdt.hpp>
-//#include <iostream>
+#include <iostream>
 
 void validateLoaderData(LoaderData *data) {
     uint32_t sum = 0;
@@ -61,7 +61,7 @@ extern "C" void kernel_main(LoaderData *loaderData) {
     
     _init();
 
-    //std::cout << "shit printing with <iostream>\n";
+    std::cout << "shit printing with <iostream>\n";
 
     isr_setup_handlers();
     debug::printf("firing c8!\n");
