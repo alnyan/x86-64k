@@ -8,6 +8,7 @@ KERNEL_OBJECTS=$(KERNEL_SOURCES_S:%.s=$(BUILD_DIR)/kernel/%.o) $(KERNEL_SOURCES_
 KERNEL_CXXFLAGS=-ffreestanding \
 				-ggdb \
 				-I. \
+				-I../common \
 				-fno-pic \
 				-fno-pie \
 				-fno-rtti \

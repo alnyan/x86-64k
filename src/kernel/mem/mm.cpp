@@ -23,18 +23,18 @@ namespace mm {
 // FIXME: only 4GiB
 #define PHYS_SIZE 0x1000000000
 
-static range<pm::AddressType> m_virtualAllocRange(0x80000000, 0xFFFF00000000);
+static range<uintptr_t> m_virtualAllocRange(0x80000000, 0xFFFF00000000);
 static mm::PhysicalPageTrackingType m_physicalTrackingStructure[PHYS_SIZE >> 24];
 
-option<mm::AddressType> findVirtualRange(pm::Pml4 *p, size_t pageCount, mm::VirtualAllocFlagsType flags) {
-    range<pm::AddressType> r;
+option<mm::AddressType> findVirtualRange(pml4_arc_t *p, size_t pageCount, mm::VirtualAllocFlagsType flags) {
+    range<uintptr_t> r;
     for (auto rs: m_virtualAllocRange.iter(0x200000)) {
         bool res = false;
-        r = range<pm::AddressType>(rs, rs + pageCount * 0x200000);
+        r = range<uintptr_t>(rs, rs + pageCount * 0x200000);
 
         // Make sure every page is free
         for (auto addr: r.iter(0x200000)) {
-            if (p->get(addr)) {
+            if (p->getPhysicalPtr(addr)) {
                 res = true;
                 break;
             }
@@ -48,7 +48,7 @@ option<mm::AddressType> findVirtualRange(pm::Pml4 *p, size_t pageCount, mm::Virt
     return option<mm::AddressType>::none();
 }
 
-void freeVirtualRange(pm::Pml4 *p, mm::AddressType start, size_t pageCount, mm::VirtualAllocFlagsType flags);
+void freeVirtualRange(pml4_arc_t *p, mm::AddressType start, size_t pageCount, mm::VirtualAllocFlagsType flags);
 
 result allocPhysicalPages(mm::PhysicalPageType *pages, size_t count, mm::PhysicalAllocFlagsType flags) {
     debug::printf("mm::allocPhysicalPages %lu\n", count);
@@ -91,12 +91,12 @@ result allocPhysicalPages(mm::PhysicalPageType *pages, size_t count, mm::Physica
 void freePhysicalPages(mm::PhysicalPageType *pages, size_t count, mm::PhysicalAllocFlagsType flags);
 
 void mm::init() {
-    range<pm::AddressType> x(0x80000000, 0xFFFF00000000);
+    range<uintptr_t> x(0x80000000, 0xFFFF00000000);
     m_virtualAllocRange = x;
     memset(m_physicalTrackingStructure, 0, sizeof(m_physicalTrackingStructure));
 }
 
-option<mm::AddressType> mm::alloc(pm::Pml4 *p, size_t pageCount, mm::AllocFlagsType flags) {
+option<mm::AddressType> mm::alloc(pml4_arc_t *p, size_t pageCount, mm::AllocFlagsType flags) {
     if (pageCount == 0) {
         return option<mm::AddressType>::none();
     }
@@ -104,7 +104,7 @@ option<mm::AddressType> mm::alloc(pm::Pml4 *p, size_t pageCount, mm::AllocFlagsT
     // TODO: this code is assuming flag layouts are identical
     mm::VirtualAllocFlagsType vaflags = mm::VirtualAllocFlagsType(flags);
     mm::PhysicalAllocFlagsType paflags = mm::PhysicalAllocFlagsType(flags);
-    pm::FlagsType pmflags = pm::FlagsType(flags);
+    page_struct_flags_t pmflags = page_struct_flags_t(flags);
 
     debug::printf("mm::alloc %lu pages\n", pageCount);
     // Make sure we don't allocate huge buffer on stack
@@ -134,19 +134,19 @@ option<mm::AddressType> mm::alloc(pm::Pml4 *p, size_t pageCount, mm::AllocFlagsT
         mm::AddressType vaddr = vstart + i * 0x200000;
         mm::AddressType paddr = physPages[i];
 
-        p->map(vaddr, paddr, pmflags);
+        p->map(vaddr, paddr, pml4_arc_t::LEVEL_2M, page_struct_flags_t(pmflags));
     }
 
     return option<mm::AddressType>::some(vstart);
 }
 
-void mm::free(pm::Pml4 *p, mm::AddressType start, size_t count) {
+void mm::free(pml4_arc_t *p, mm::AddressType start, size_t count) {
     debug::printf("mm::free %la - %la\n", start, start + count * 0x200000);
 
     for (size_t i = 0; i < count; ++i) {
         mm::AddressType vaddr = start + i * 0x200000;
         
-        if (!p->get(vaddr)) {
+        if (!p->getPhysicalPtr(vaddr)) {
             panic_msg("Possible double-free detected: tried to free non-allocated page\n");
         }
 

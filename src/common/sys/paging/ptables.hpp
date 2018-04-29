@@ -1,12 +1,13 @@
 #pragma once
 
+#define ALIGNED(alignment) __attribute__((__aligned__(alignment)))
 #define ALIGNED_STRUCT(alignment) struct __attribute__((__aligned__(alignment)))
 #define PACKED_STRUCT struct __attribute__((__packed__))
 #define PACKED_AND_ALIGNED_STRUCT(alignment) struct __attribute__((__packed__)) __attribute__((__aligned__(alignment)))
 
 using bit_t = uint8_t;
 
-enum page_struct_flags_t {
+enum page_struct_flags_t : uint64_t {
     PTSE_FLAG_PRESENT       = 1ull << 0,
     PTSE_FLAG_RW            = 1ull << 1,
     PTSE_FLAG_RING3         = 1ull << 2,
@@ -21,12 +22,13 @@ enum page_struct_flags_t {
     PTSE_FLAG_NO_EXECUTE    = 1ull << 63
 };
 
-const int PTSE_SIZEOF = 0x4000;
-const int PTSE_PAGE_SIZE = 0x4000;
+const int PTSE_SIZEOF = 0x1000;
+const int PTSE_PAGE_SIZE = 0x1000;
 const int PTSE_ENTRIES32 = PTSE_SIZEOF / sizeof(uint32_t);
 const int PTSE_ENTRIES64 = PTSE_SIZEOF / sizeof(uint64_t);
 const int PTSE_PDPT32_ENTRIES = 4;
 const int PTSE_PDPT32_ALIGNMENT = 0x20;
+#define PTSE_ALIGNED ALIGNED(PTSE_SIZEOF)
 #define PTSE_STRUCT ALIGNED_STRUCT(PTSE_SIZEOF)
 
 union page_table_entry32_t {

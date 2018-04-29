@@ -2,7 +2,7 @@
 #include <sys/types.h>
 #include <sys/debug.hpp>
 #include <algo/string.hpp>
-#include <mem/pm.hpp>
+#include <sys/paging/ptse_arc_pae.hpp>
 #include <mem/mm.hpp>
 #include <mem/heap.hpp>
 #include <algo/new.hpp>
@@ -34,6 +34,24 @@ extern "C" void __cxa_pure_virtual() {
 
 extern "C" void _init();
 
+pml4_arc_t *arc;
+
+extern "C" void *memalign(size_t alignment, size_t size) {
+    return reinterpret_cast<void*>(mm::alloc(arc, 1, mm::AllocFlagsType(0)).orPanic("fuck"));
+}
+
+class test_allocator : public arc_allocator_t {
+private:
+    uintptr_t m_offs = 0x304000;
+public:
+    void *allocate() override { 
+        auto ptr = reinterpret_cast<void*>(m_offs);
+        m_offs += 0x4000;
+        return ptr;
+    }
+    void deallocate(void *ptr) override {}
+};
+
 extern "C" void kernel_main(LoaderData *loaderData) {
     debug::init();
     devices::rs232::SerialPort com1(0x3F8);
@@ -45,11 +63,29 @@ extern "C" void kernel_main(LoaderData *loaderData) {
     gdt::init();
 
     debug::printf("Entered kernel\n");
-    validateLoaderData(loaderData);
-    pm::retainLoaderPaging(loaderData);
+    
+    // not necessary at this point
+    // validateLoaderData(loaderData);
+
+    // temporary paging 
+
+    debug::printf("setting up temporary pml4 at wrong place\n");
+    test_allocator allocator;
+    arc = new (reinterpret_cast<void*>(0x300000)) pml4_arc_t(&allocator);
+    uint64_t vma64 = 0x4000000000;
+
+    arc->map(0x0, 0x0, pml4_arc_t::LEVEL_2M, page_struct_flags_t(PTSE_FLAG_RW | PTSE_FLAG_RING3));
+    arc->map(0x200000, 0x200000, pml4_arc_t::LEVEL_2M, page_struct_flags_t(PTSE_FLAG_RW | PTSE_FLAG_RING3));
+    arc->map(vma64,            0x1000000, pml4_arc_t::LEVEL_2M, page_struct_flags_t(PTSE_FLAG_RW | PTSE_FLAG_RING3)); // TODO: map more pages if needed
+    arc->map(vma64 + 0x200000, 0x1200000, pml4_arc_t::LEVEL_2M, page_struct_flags_t(PTSE_FLAG_RW | PTSE_FLAG_RING3)); // TODO: map more pages if needed
+    arc->map(vma64 + 0x400000, 0x1400000, pml4_arc_t::LEVEL_2M, page_struct_flags_t(PTSE_FLAG_RW | PTSE_FLAG_RING3)); // TODO: map more pages if needed
+    arc->map(vma64 + 0x600000, 0x1600000, pml4_arc_t::LEVEL_2M, page_struct_flags_t(PTSE_FLAG_RW | PTSE_FLAG_RING3)); // TODO: map more pages if needed
+    arc->map(vma64 + 0x800000, 0x1800000, pml4_arc_t::LEVEL_2M, page_struct_flags_t(PTSE_FLAG_RW | PTSE_FLAG_RING3)); // TODO: map more pages if needed
+    arc->apply();
+    debug::printf("done\n");
+
     mm::init();
-    pm::kernel()->dump();
-    heap::init();
+    heap::init(arc);
 
     // allocating 64K task-switch stack, 64-bit aligned
     const unsigned taskswitchStackSize = 0x10000;

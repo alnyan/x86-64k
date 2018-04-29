@@ -27,7 +27,7 @@ bool pm::isFree(uintptr_t addr) {
 uintptr_t pm::alloc() {
     debug::printf("pm::alloc\n");
     // Brute force scan here
-    for (uintptr_t addr = paging_region.start; addr < paging_region.end; addr += 0x1000) {
+    for (uintptr_t addr = paging_region.start; addr < paging_region.end; addr += 0x2000) {
         if (isFree(addr)) {        
             setAlloc(addr);
             memset(reinterpret_cast<void *>(addr), 0, 0x1000);

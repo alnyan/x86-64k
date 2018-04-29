@@ -1,7 +1,8 @@
 #pragma once
 #include <sys/types.h>
 #include <stdint.h>
-#include <algo/option.hpp>
+#include <opt/option.hpp>
+#include <sys/paging/ptse_arc_pae.hpp>
 
 namespace heap {
 
@@ -115,6 +116,6 @@ namespace heap {
     extern Heap kernelHeap;
 
     /// Initializes kernel heap
-    void init();
+    void init(pml4_arc_t *arc);
 
 }

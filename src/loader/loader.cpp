@@ -10,7 +10,6 @@
 #include <mem/pm64.hpp>
 #include <sys/panic.hpp>
 #include "loader.hpp"
-#include <sys/paging/ptse_arc_pd32.hpp>
 #include <sys/paging/ptse_arc_pae.hpp>
 
 extern "C" struct multiboot_info *mb_info_ptr;
@@ -19,7 +18,7 @@ extern "C" [[noreturn]] void long_enter(uint64_t);
 LoaderData loader_data;
 
 static constexpr uintptr_t m_loadAddr = 0x400000; // Real address at which kernel will be loaded
-pm::pae::Pdpt *pdp;
+pdpt_arc_t<uint32_t> *arcp;
 
 void load_elf(uintptr_t loadAddr, uintptr_t mod_start, size_t mod_size) {
     debug::printf("kernel located at %a\n", mod_start);
@@ -39,12 +38,12 @@ void load_elf(uintptr_t loadAddr, uintptr_t mod_start, size_t mod_size) {
     uint64_t vma32 = 0x4000000;
     uint64_t vmadifference = vma64 - vma32;
 
-    pdp->map(vma32,            0x1000000, 0x86); // TODO: map more pages if needed
-    pdp->map(vma32 + 0x200000, 0x1200000, 0x86); // TODO: map more pages if needed
-    pdp->map(vma32 + 0x400000, 0x1400000, 0x86); // TODO: map more pages if needed
-    pdp->map(vma32 + 0x600000, 0x1600000, 0x86); // TODO: map more pages if needed
-    pdp->map(vma32 + 0x800000, 0x1800000, 0x86); // TODO: map more pages if needed
-    pdp->apply();
+    arcp->map(vma32,            0x1000000, pdpt_arc_t<uint32_t>::LEVEL_2M, page_struct_flags_t(PTSE_FLAG_RW | PTSE_FLAG_RING3)); // TODO: map more pages if needed
+    arcp->map(vma32 + 0x200000, 0x1200000, pdpt_arc_t<uint32_t>::LEVEL_2M, page_struct_flags_t(PTSE_FLAG_RW | PTSE_FLAG_RING3)); // TODO: map more pages if needed
+    arcp->map(vma32 + 0x400000, 0x1400000, pdpt_arc_t<uint32_t>::LEVEL_2M, page_struct_flags_t(PTSE_FLAG_RW | PTSE_FLAG_RING3)); // TODO: map more pages if needed
+    arcp->map(vma32 + 0x600000, 0x1600000, pdpt_arc_t<uint32_t>::LEVEL_2M, page_struct_flags_t(PTSE_FLAG_RW | PTSE_FLAG_RING3)); // TODO: map more pages if needed
+    arcp->map(vma32 + 0x800000, 0x1800000, pdpt_arc_t<uint32_t>::LEVEL_2M, page_struct_flags_t(PTSE_FLAG_RW | PTSE_FLAG_RING3)); // TODO: map more pages if needed
+    arcp->apply();
 
     for (size_t i = 0; i < ns; ++i) {
         const Elf64_Phdr *programHeader = elf->programHeader(i);
@@ -90,6 +89,18 @@ void load_elf(uintptr_t loadAddr, uintptr_t mod_start, size_t mod_size) {
     // Convert pdp to pml4
     pm_disable();
 
+    // WORLD IS NOT PREPARED TO THE FUTURE
+    /*pml4_arc_t *arc = new pml4_arc_t;
+
+    arc->map(0x0, 0x0, pml4_arc_t::LEVEL_2M, page_struct_flags_t(PTSE_FLAG_RW | PTSE_FLAG_RING3));
+    arc->map(0x200000, 0x200000, pml4_arc_t::LEVEL_2M, page_struct_flags_t(PTSE_FLAG_RW | PTSE_FLAG_RING3));
+    arc->map(vma64,            0x1000000, pml4_arc_t::LEVEL_2M, page_struct_flags_t(PTSE_FLAG_RW | PTSE_FLAG_RING3)); // TODO: map more pages if needed
+    arc->map(vma64 + 0x200000, 0x1200000, pml4_arc_t::LEVEL_2M, page_struct_flags_t(PTSE_FLAG_RW | PTSE_FLAG_RING3)); // TODO: map more pages if needed
+    arc->map(vma64 + 0x400000, 0x1400000, pml4_arc_t::LEVEL_2M, page_struct_flags_t(PTSE_FLAG_RW | PTSE_FLAG_RING3)); // TODO: map more pages if needed
+    arc->map(vma64 + 0x600000, 0x1600000, pml4_arc_t::LEVEL_2M, page_struct_flags_t(PTSE_FLAG_RW | PTSE_FLAG_RING3)); // TODO: map more pages if needed
+    arc->map(vma64 + 0x800000, 0x1800000, pml4_arc_t::LEVEL_2M, page_struct_flags_t(PTSE_FLAG_RW | PTSE_FLAG_RING3)); // TODO: map more pages if needed
+    arc->apply();*/
+    
     pm::pm64::Pml4 *pml = new (0x100000) pm::pm64::Pml4;
     pml->map(0x0, 0x0, 0x86);
     pml->map(0x200000, 0x200000, 0x86);
@@ -135,15 +146,42 @@ uint32_t calculateLoadAddr(struct multiboot_mod_list *mods, uint32_t modCount) {
     return addr;
 }
 
+extern "C" void __cxa_pure_virtual() {
+    panic_msg("__cxa_pure_virtual: pure virtual call encountered.");
+}
+
+void *operator new(size_t size, std::align_val_t alignment) {
+    debug::printf("new with size: %a and alignment: %a\n", size, alignment);
+    return reinterpret_cast<void*>(pm::alloc());
+}
+
+void operator delete(void *ptr, size_t size, std::align_val_t alignment) { }
+void operator delete(void *ptr, size_t size) { }
+void operator delete(void *ptr) { }
+
+class pm_arc_allocator : public arc_allocator_t {
+public:
+    void *allocate() override { return reinterpret_cast<void*>(pm::alloc());}
+    void deallocate(void *ptr) override {}
+};
+
 extern "C" void loader_main(void) {
     debug::printf("at loader_main\n");
     // Map loader here
+    
     pm::setAlloc(0x100000); // Because pdpt
-    pdp = new (0x100000) pm::pae::Pdpt;
-    pdp->map(0x00000000, 0x00000000, 0x86);
-    pdp->map(0x00200000, 0x00200000, 0x86);
 
-    pdp->apply();
+    pm_arc_allocator alloca;
+    pdpt_arc_t<uint32_t> arc(static_cast<arc_allocator_t*>(&alloca));
+    arcp = &arc;
+    debug::printf("mapping 0 -> 0\n");
+    auto res = arc.map(0x00000000, 0x00000000, pdpt_arc_t<uint32_t>::LEVEL_2M, page_struct_flags_t(PTSE_FLAG_RW | PTSE_FLAG_RING3));
+    if (res != ptse_arc_status_t::OK) panic_msg("arc.map result: %d", res);
+    debug::printf("mapping 0x00200000 -> 0x00200000\n");
+    res = arc.map(0x00200000, 0x00200000, pdpt_arc_t<uint32_t>::LEVEL_2M, page_struct_flags_t(PTSE_FLAG_RW | PTSE_FLAG_RING3));
+    if (res != ptse_arc_status_t::OK) panic_msg("arc.map result: %d", res);
+    arc.apply();
+
     pae_enable();
     pm_enable();
 

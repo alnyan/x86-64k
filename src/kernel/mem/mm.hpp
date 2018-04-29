@@ -1,8 +1,9 @@
 #pragma once
-#include <algo/option.hpp>
+#include <opt/option.hpp>
 #include <algo/range.hpp>
 #include <algo/result.hpp>
-#include <mem/pm.hpp>
+#include <sys/paging/ptse_arc_pae.hpp>
+// #include <mem/pm.hpp>
 
 namespace mm {
 
@@ -49,7 +50,7 @@ namespace mm {
      * \return some(addr) - if allocation succeeded,\n
      *         none()     - if allocation failed
      */
-    option<AddressType> alloc(pm::Pml4 *p, size_t pageCount, AllocFlagsType flags);
+    option<AddressType> alloc(pml4_arc_t *p, size_t pageCount, AllocFlagsType flags);
 
     /**
      * \brief Frees a block of memory and releases bound physical pages
@@ -57,7 +58,7 @@ namespace mm {
      * \param start       - Address of the beginning of the block
      * \param pageCount   - Number of 2MiB pages to free
      */
-    void free(pm::Pml4 *p, AddressType start, size_t pageCount);
+    void free(pml4_arc_t *p, AddressType start, size_t pageCount);
 
     /**
      * \brief Initializes memory manager settings

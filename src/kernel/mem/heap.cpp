@@ -258,8 +258,8 @@ bool heap::Heap::valid() const {
     return m_size && m_base;
 }
 
-void heap::init() {
-    auto heapRegion = mm::alloc(pm::kernel(), 16, mm::AllocFlagsType::AF_RW).orPanic("Failed to allocate memory for kernel heap");
+void heap::init(pml4_arc_t *arc) {
+    auto heapRegion = mm::alloc(arc, 16, mm::AllocFlagsType::AF_RW).orPanic("Failed to allocate memory for kernel heap");
     kernelHeap.reset(heapRegion, 16 * 0x200000);
     debug::printf("Created heap at %la, size %lu\n", heapRegion, 16 * 0x200000);
 }
