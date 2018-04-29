@@ -12,6 +12,7 @@
 #include <sys/isr.hpp>
 #include <sys/gdt.hpp>
 #include <iostream>
+#include <vector>
 
 void validateLoaderData(LoaderData *data) {
     uint32_t sum = 0;
@@ -58,10 +59,25 @@ extern "C" void kernel_main(LoaderData *loaderData) {
 
     // vesa::init();
 
-    
-    _init();
+    debug::printf("enabling fpu+sse\n");
+    asm volatile (
+        "push %rax\n"
+        "mov %cr0, %eax\n"
+        "and $0xfffffffd, %eax\n" // turning off CR0.EM 
+        "or $0x00000002, %eax\n" // turning on CR0.MP
+        "mov %eax, %cr0\n"
+        "mov %cr4, %eax\n"
+        "or $0x00000600, %eax\n" // enabling CR4.OSFXSR and CR4.OSXMMEXCPT
+        "mov %eax, %cr4\n"
+        "pop %rax"
+    );
 
+    debug::printf("testing stdc++\n");
     std::cout << "shit printing with <iostream>\n";
+    std::vector<int> vec = {1, 2, 3, 4, 5};
+    std::cout << "vector of values incoming: ";
+    for (auto v: vec) std::cout << v << " ";
+    std::cout << std::endl;
 
     isr_setup_handlers();
     debug::printf("firing c8!\n");

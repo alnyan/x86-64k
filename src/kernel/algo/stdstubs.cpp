@@ -1,4 +1,5 @@
 #include <sys/panic.hpp>
+#include <mem/heap.hpp>
 
 #define STUB(name) void name() { panic_msg(#name " is not implemented"); }
 #define STUBD(name, type, ...) type name(__VA_ARGS__) { panic_msg(#name " is not implemented"); }
@@ -13,7 +14,17 @@ extern "C" {
     int wctob(wint_t wc) { return wc; }
     wint_t btowc(int c) { return c; }
     wctype_t wctype(const char* prop) { return 0; }
-    int strcmp(const char *a, const char *b, size_t lim) {
+    int strcmp(const char *a, const char *b) {
+        while (*a && *b && (*a || *b)) {
+            if (*a != *b) {
+                return 1;
+            }
+            ++a;
+            ++b;
+        }
+        return *a == 0 && *b == 0 ? 0 : -1;
+    }
+    int memcmp(const char *a, const char *b, size_t lim) {
         size_t i = 0;
         while (i < lim && (*a || *b)) {
             if (*a != *b) {
@@ -27,7 +38,23 @@ extern "C" {
     }
     size_t fwrite ( const void * ptr, size_t size, size_t count, FILE * stream ) {
         debug::printf(static_cast<const char*>(ptr));
-        return size;
+        return count;
+    }
+    void *malloc(size_t sz) { 
+        debug::printf("malloc of size %d\n", sz);
+        auto ptr = heap::kernelHeap.alloc(sz).orPanic("malloc failed");
+        debug::printf("mallocated ptr %a\n", ptr);
+        return ptr;
+    }
+    void free(void *ptr) { 
+        debug::printf("dealloc of ptr %a\n", ptr);
+        return heap::kernelHeap.free(ptr);
+    }
+    int fflush(FILE *stream) { return 0; }
+    int putc(int chr, FILE *stream) { 
+        char ch[2] = {static_cast<char>(chr), 0};
+        debug::puts(ch); 
+        return chr;
     }
 
     STUB(abort)
@@ -35,13 +62,11 @@ extern "C" {
     STUB(__errno)
     STUB(fclose)
     STUB(fdopen)
-    STUB(fflush)
     STUB(fileno)
     STUB(fopen)
     STUB(fputc)
     STUB(fputs)
     STUB(fread)
-    STUB(free)
     STUB(fseek)
     STUB(fstat)
     STUB(ftell)
@@ -50,11 +75,8 @@ extern "C" {
     STUB(iswctype)
     STUB(__locale_mb_cur_max)
     STUB(lseek)
-    STUB(malloc)
     STUB(mbrtowc)
     STUB(memchr)
-    STUB(memcmp)
-    STUB(putc)
     STUB(putwc)
     STUB(read)
     STUB(realloc)

@@ -10,6 +10,8 @@
 #include <mem/pm64.hpp>
 #include <sys/panic.hpp>
 #include "loader.hpp"
+#include <sys/paging/ptse_arc_pd32.hpp>
+#include <sys/paging/ptse_arc_pae.hpp>
 
 extern "C" struct multiboot_info *mb_info_ptr;
 extern "C" [[noreturn]] void long_enter(uint64_t);

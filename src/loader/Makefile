@@ -6,6 +6,7 @@ LOADER_HEADERS=$(shell find . -name "*.hpp" -printf "%P\n" -type f)
 LOADER_CXXFLAGS=-ffreestanding \
 			    -ggdb \
 				-I. \
+				-I../common \
 				-fno-rtti \
 				-fno-exceptions \
 				-fno-builtin \

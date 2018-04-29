@@ -5,10 +5,10 @@
 kernel_entry:
     cli
 
-    //pushq %rdi
-    //call _init
+    pushq %rdi
+    call _init // scary because libstdc++ can do anything before kernel initialized
 
-    //popq %rdi
+    popq %rdi
     call kernel_main
 
 1:

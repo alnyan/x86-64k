@@ -80,6 +80,8 @@ long_enter:
     movl $entry_store, %esi
     movl $loader_data, %edi // Will be passed to kernel
 .code64
+    // TODO REMOVE THAT SHIET
+    movabs $0x4000a00000, %rsp // setting stack
     movq (%rsi), %rax
     jmp *%rax
 
