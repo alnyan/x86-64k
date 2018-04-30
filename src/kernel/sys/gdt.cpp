@@ -1,6 +1,6 @@
 #include <sys/gdt.hpp>
 #include <stdint.h>
-#include <algo/memory.hpp>
+#include <cstring>
 
 typedef struct __attribute__ ((packed)) gdt_tss {
     uint32_t rsvd1;

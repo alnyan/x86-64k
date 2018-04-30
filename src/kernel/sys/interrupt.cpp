@@ -1,6 +1,6 @@
 #include <sys/interrupt.hpp>
 #include <dev/pic.hpp>
-#include <algo/memory.hpp>
+#include <cstring>
 #include <sys/debug.hpp>
 
 typedef struct __attribute__((packed)) __attribute__((aligned(16))) {

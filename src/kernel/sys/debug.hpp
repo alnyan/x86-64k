@@ -1,7 +1,8 @@
 #pragma once
-#include <stdint.h> 
-#include <stdarg.h>
-#include <sys/types.h>
+#include <cstdint> 
+#include <cstdarg>
+#include <cstddef>
+#include <cstring>
 #include <dev/chardev.hpp>
 #include <algo/string.hpp>
 

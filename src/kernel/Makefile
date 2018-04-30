@@ -4,6 +4,12 @@ KERNEL_SOURCES_CXX=$(shell find . -name "*.cpp" -printf "%P\n" -type f)
 KERNEL_SOURCES_CXX_NOFLOAT=$(shell find . -name "*.cxx" -printf "%P\n" -type f)
 KERNEL_HEADERS=$(shell find . -name "*.hpp" -printf "%P\n" -type f)
 KERNEL_OBJECTS=$(KERNEL_SOURCES_S:%.s=$(BUILD_DIR)/kernel/%.o) $(KERNEL_SOURCES_CXX:%.cpp=$(BUILD_DIR)/kernel/%.o) $(KERNEL_SOURCES_CXX_NOFLOAT:%.cxx=$(BUILD_DIR)/kernel/%.o)
+KERNEL_LIBSTDCXX_IMPORTS=-lc -lm -lg -lnosys -lsupc++ -lstdc++
+
+COMMON_SOURCES_CXX=$(shell find ../common -name "*.cpp" -printf "../common/%P\n" -type f)
+COMMON_OBJECTS=$(COMMON_SOURCES_CXX:%.cpp=$(BUILD_DIR)/common64/dummyfolder/%.o)
+
+ALL_OBJECTS=$(KERNEL_OBJECTS) $(COMMON_OBJECTS)
 
 KERNEL_CXXFLAGS=-ffreestanding \
 				-ggdb \
@@ -35,14 +41,14 @@ KERNEL_CXXFLAGS_NOFLOAT= -msoft-float \
 KERNEL_ASFLAGS=--64
 
 KERNEL_LDFLAGS=-nostdlib \
-			   -O0 \
-			   -ggdb \
-                           -Tkernel.lds \
-			   -fno-pic \
-			   -fno-pie \
-			   -ffreestanding \
-			   -mcmodel=large \
-			   -z max-page-size=0x1000
+               -O0 \
+               -ggdb \
+               -Tkernel.lds \
+               -fno-pic \
+               -fno-pie \
+               -ffreestanding \
+               -mcmodel=large \
+               -z max-page-size=0x1000
 
 LD64=$(TOOLCHAIN64)/bin/$(TARGET64)-g++
 AS64=$(TOOLCHAIN64)/bin/$(TARGET64)-as
@@ -51,22 +57,17 @@ CXX64=$(TOOLCHAIN64)/bin/$(TARGET64)-g++
 KERNEL_CRTBEGIN=$(shell $(CXX64) -print-file-name=crtbegin.o)
 KERNEL_CRTEND=$(shell $(CXX64) -print-file-name=crtend.o)
 
-DIRS=$(shell dirname $(KERNEL_OBJECTS)) $(BUILD_DIR)/docs/kernel
+DIRS=$(shell dirname $(ALL_OBJECTS)) $(BUILD_DIR)/docs/kernel
 
 all: $(BUILD_DIR)/kernel.elf
 
-$(BUILD_DIR)/kernel.elf: mkdirs $(BUILD_DIR)/kernel/crti.o $(BUILD_DIR)/kernel/crtn.o $(KERNEL_OBJECTS)
+$(BUILD_DIR)/kernel.elf: mkdirs $(BUILD_DIR)/kernel/crti.o $(BUILD_DIR)/kernel/crtn.o $(ALL_OBJECTS)
 	$(LD64) -o $@ $(KERNEL_LDFLAGS) \
 		$(BUILD_DIR)/kernel/crti.o \
 		$(KERNEL_CRTBEGIN) \
-		$(KERNEL_OBJECTS) \
+		$(ALL_OBJECTS) \
 		$(KERNEL_CRTEND) \
-		-lc \
-		-lm \
-		-lg \
-		-lnosys \
-		-lsupc++ \
-		-lstdc++ \
+		$(KERNEL_LIBSTDCXX_IMPORTS) \
 		$(BUILD_DIR)/kernel/crtn.o
 
 
@@ -78,6 +79,9 @@ $(BUILD_DIR)/kernel/%.o: %.cpp $(KERNEL_HEADERS)
 
 $(BUILD_DIR)/kernel/%.o: %.cxx $(KERNEL_HEADERS)
 	$(CXX64) -c -o $@ $(KERNEL_CXXFLAGS) $(KERNEL_CXXFLAGS_NOFLOAT) $<
+
+$(BUILD_DIR)/common64/dummyfolder/%.o: %.cpp $(KERNEL_HEADERS)
+	$(CXX64) -c -o $@ $(KERNEL_CXXFLAGS) $<
 
 docs: $(KERNEL_SOURCES_CXX) $(KERNEL_HEADERS) mkdirs
 	doxygen doxygen.conf

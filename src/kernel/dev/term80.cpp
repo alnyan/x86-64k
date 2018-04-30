@@ -1,6 +1,6 @@
 #include <dev/term80.hpp>
 #include <dev/io.hpp>
-#include <algo/memory.hpp>
+#include <cstring>
 
 const int TERM_SCREEN_WIDTH = 80;
 const int TERM_SCREEN_HEIGHT = 25;

@@ -1,12 +1,6 @@
 #pragma once
 #include <sys/types.h>
 
-extern "C" {
-    size_t strlen(const char *s); 
-    //const char *strcmp(const char *a, const char *b);
-    const char *strncmp(const char *a, const char *b, size_t lim);
-}
-
 // Immutable static string
 class str {
 public:

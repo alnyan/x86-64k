@@ -38,3 +38,11 @@ pm_load:
     movl 4(%esp), %eax
     movl %eax, %cr3
     ret
+    
+.global pae_enable
+.align 16
+pae_enable:
+    movl %cr4, %eax
+    orl $0x20, %eax
+    movl %eax, %cr4
+ret

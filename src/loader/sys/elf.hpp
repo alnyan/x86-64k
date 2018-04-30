@@ -1,6 +1,6 @@
 #pragma once
 #include <sys/elf.h>
-#include <algo/string.hpp>
+#include <nostdcxx/string.hpp>
 
 namespace elf {
 

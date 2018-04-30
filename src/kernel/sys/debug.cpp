@@ -1,6 +1,6 @@
 #include "debug.hpp"
 #include <algo/itoa.hpp>
-#include <algo/memory.hpp>
+#include <cstring>
 #include <dev/io.hpp>
 #include <sys/panic.hpp>
 

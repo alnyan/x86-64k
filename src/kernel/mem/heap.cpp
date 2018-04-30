@@ -1,5 +1,5 @@
 #include "heap.hpp"
-#include <algo/memory.hpp>
+#include <cstring>
 #include <algo/algorithm.hpp>
 #include <mem/mm.hpp>
 

@@ -6,12 +6,10 @@ gdt_load:
 	lgdt (%rdi)
 
 	sub $16, %rsp 
-	// ljmp is not working in x64
 	movq $8, 8(%rsp)
 	movabsq $gdt_reload, %rax
 	mov %rax, (%rsp)
 	lretq
-	// ljmp $0x08, $gdt_reload
 
 .global tr_load
 .align 16

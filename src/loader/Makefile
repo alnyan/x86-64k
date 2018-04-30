@@ -1,7 +1,12 @@
-LOADER_SOURCES_S=mem/pm_s.s mem/pmpae_s.s
+LOADER_SOURCES_S=mem/pm_s.s
 LOADER_SOURCES_CXX=$(shell find . -name "*.cpp" -printf "%P\n" -type f)
 LOADER_OBJECTS=$(LOADER_SOURCES_S:%.s=$(BUILD_DIR)/loader/%.o) $(LOADER_SOURCES_CXX:%.cpp=$(BUILD_DIR)/loader/%.o)
 LOADER_HEADERS=$(shell find . -name "*.hpp" -printf "%P\n" -type f)
+
+COMMON_SOURCES_CXX=$(shell find ../common -name "*.cpp" -printf "../common/%P\n" -type f)
+COMMON_OBJECTS=$(COMMON_SOURCES_CXX:%.cpp=$(BUILD_DIR)/common32/dummyfolder/%.o)
+
+ALL_OBJECTS=$(LOADER_OBJECTS) $(COMMON_OBJECTS)
 
 LOADER_CXXFLAGS=-ffreestanding \
 			    -ggdb \
@@ -18,7 +23,8 @@ LOADER_CXXFLAGS=-ffreestanding \
 				-Wno-unused-but-set-variable \
 				-Wno-unused-parameter \
 				-Wimplicit-fallthrough \
-				-std=c++1z
+				-std=c++1z \
+				-DNO_STDCXX
 
 LOADER_ASFLAGS=--32
 
@@ -36,14 +42,14 @@ LOADER_CRTBEGIN=$(shell $(CXX32) -print-file-name=crtbegin.o)
 LOADER_CRTEND=$(shell $(CXX32) -print-file-name=crtend.o)
 LOADER_LIBGCC=$(shell $(CXX32) --print-libgcc-file-name)
 
-DIRS=$(shell dirname $(LOADER_OBJECTS)) $(BUILD_DIR)/loader/boot
+DIRS=$(shell dirname $(ALL_OBJECTS)) $(BUILD_DIR)/loader/boot
 
-$(BUILD_DIR)/loader.elf: mkdirs $(BUILD_DIR)/loader/boot/multiboot.o $(BUILD_DIR)/loader/crti.o $(BUILD_DIR)/loader/crtn.o $(LOADER_OBJECTS)
+$(BUILD_DIR)/loader.elf: mkdirs $(BUILD_DIR)/loader/boot/multiboot.o $(BUILD_DIR)/loader/crti.o $(BUILD_DIR)/loader/crtn.o $(ALL_OBJECTS)
 	$(LD32) -o $@ $(LOADER_LDFLAGS) \
 	    $(BUILD_DIR)/loader/boot/multiboot.o \
 		$(BUILD_DIR)/loader/crti.o \
 		$(LOADER_CRTBEGIN) \
-		$(LOADER_OBJECTS) \
+		$(ALL_OBJECTS) \
 		$(LOADER_LIBGCC) \
 		$(LOADER_CRTEND) \
 		$(BUILD_DIR)/loader/crtn.o
@@ -53,6 +59,10 @@ $(BUILD_DIR)/loader/%.o: %.s
 
 $(BUILD_DIR)/loader/%.o: %.cpp $(LOADER_HEADERS)
 	$(CXX32) -c -o $@ $(LOADER_CXXFLAGS) $<
+
+$(BUILD_DIR)/common32/dummyfolder/%.o: %.cpp $(LOADER_HEADERS)
+	$(CXX32) -c -o $@ $(LOADER_CXXFLAGS) $<
+
 
 mkdirs:
 	@mkdir -p $(DIRS)

@@ -1,21 +1,24 @@
 #include <stdint.h>
 #include <sys/std.hpp>
 #include <mem/pm.hpp>
-#include <mem/pmpae.hpp>
 #include <sys/debug.hpp>
-#include <sys/types.h>
+#include <stddef.h>
 #include <boot/multiboot.h>
 #include <sys/elf.hpp>
-#include <algo/memory.hpp>
-#include <mem/pm64.hpp>
 #include <sys/panic.hpp>
-#include "loader.hpp"
+#include <loader.hpp>
 #include <sys/paging/ptse_arc_pae.hpp>
 
 extern "C" struct multiboot_info *mb_info_ptr;
 extern "C" [[noreturn]] void long_enter(uint64_t);
 
 LoaderData loader_data;
+
+class pm_arc_allocator : public arc_allocator_t {
+public:
+    void *allocate() override { return reinterpret_cast<void*>(pm::alloc());}
+    void deallocate(void *ptr) override {}
+};
 
 static constexpr uintptr_t m_loadAddr = 0x400000; // Real address at which kernel will be loaded
 pdpt_arc_t<uint32_t> *arcp;
@@ -64,21 +67,6 @@ void load_elf(uintptr_t loadAddr, uintptr_t mod_start, size_t mod_size) {
 
             const void *l = reinterpret_cast<const void *>(mod_start + off32);
 
-            // Sanity check: only one page is mapped now
-            assert(memsz32 <= 0x200000);
-
-            //debug::printf("paddr32 = %a\n", paddr32);
-
-            //uint32_t paddrPage = paddr32 & (-0x200000);
-
-            // debug::printf("page-aligned: %a\n", paddrPage);
-            // if (true||paddrPage >= loadAddr) {
-            //     pdp->map(0x00400000, paddrPage, 0x86);
-            //     pdp->apply();
-            // } else {
-            //     panic_msg("Physical address is too low\n");
-            // }
-
             memset(reinterpret_cast<void*>(vaddr64 - vmadifference), 0, size32);
             memcpy(reinterpret_cast<void *>(vaddr64 - vmadifference), l, size32);
 
@@ -90,7 +78,8 @@ void load_elf(uintptr_t loadAddr, uintptr_t mod_start, size_t mod_size) {
     pm_disable();
 
     // WORLD IS NOT PREPARED TO THE FUTURE
-    /*pml4_arc_t *arc = new pml4_arc_t;
+    pm_arc_allocator alloca;
+    pml4_arc_t *arc = new pml4_arc_t(&alloca);
 
     arc->map(0x0, 0x0, pml4_arc_t::LEVEL_2M, page_struct_flags_t(PTSE_FLAG_RW | PTSE_FLAG_RING3));
     arc->map(0x200000, 0x200000, pml4_arc_t::LEVEL_2M, page_struct_flags_t(PTSE_FLAG_RW | PTSE_FLAG_RING3));
@@ -99,9 +88,9 @@ void load_elf(uintptr_t loadAddr, uintptr_t mod_start, size_t mod_size) {
     arc->map(vma64 + 0x400000, 0x1400000, pml4_arc_t::LEVEL_2M, page_struct_flags_t(PTSE_FLAG_RW | PTSE_FLAG_RING3)); // TODO: map more pages if needed
     arc->map(vma64 + 0x600000, 0x1600000, pml4_arc_t::LEVEL_2M, page_struct_flags_t(PTSE_FLAG_RW | PTSE_FLAG_RING3)); // TODO: map more pages if needed
     arc->map(vma64 + 0x800000, 0x1800000, pml4_arc_t::LEVEL_2M, page_struct_flags_t(PTSE_FLAG_RW | PTSE_FLAG_RING3)); // TODO: map more pages if needed
-    arc->apply();*/
+    arc->apply();
     
-    pm::pm64::Pml4 *pml = new (0x100000) pm::pm64::Pml4;
+    /*pm::pm64::Pml4 *pml = new (0x100000) pm::pm64::Pml4;
     pml->map(0x0, 0x0, 0x86);
     pml->map(0x200000, 0x200000, 0x86);
     pml->map(vma64,            0x1000000, 0x86); // TODO: map more pages if needed
@@ -109,7 +98,7 @@ void load_elf(uintptr_t loadAddr, uintptr_t mod_start, size_t mod_size) {
     pml->map(vma64 + 0x400000, 0x1400000, 0x86); // TODO: map more pages if needed
     pml->map(vma64 + 0x600000, 0x1600000, 0x86); // TODO: map more pages if needed
     pml->map(vma64 + 0x800000, 0x1800000, 0x86); // TODO: map more pages if needed
-    pml->apply();
+    pml->apply();*/
 
     debug::printf("Entry: %A\n", entry64);
     // Prepare loader info struct for kernel
@@ -158,12 +147,6 @@ void *operator new(size_t size, std::align_val_t alignment) {
 void operator delete(void *ptr, size_t size, std::align_val_t alignment) { }
 void operator delete(void *ptr, size_t size) { }
 void operator delete(void *ptr) { }
-
-class pm_arc_allocator : public arc_allocator_t {
-public:
-    void *allocate() override { return reinterpret_cast<void*>(pm::alloc());}
-    void deallocate(void *ptr) override {}
-};
 
 extern "C" void loader_main(void) {
     debug::printf("at loader_main\n");

@@ -7,16 +7,3 @@ size_t strlen(const char *s) {
     }
     return r;
 }
-
-const char *strncmp(const char *a, const char *b, size_t lim) {
-    size_t i = 0;
-    while (i < lim && (*a || *b)) {
-        if (*a != *b) {
-            return a;
-        }
-        ++a;
-        ++b;
-        ++i;
-    }
-    return nullptr;
-}

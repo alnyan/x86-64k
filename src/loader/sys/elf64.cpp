@@ -1,5 +1,5 @@
 #include "elf.hpp"
-#include <algo/string.hpp>
+#include <nostdcxx/string.hpp>
 
 bool elf::Elf64::isValid() const {
     return !strncmp(ELFMAG, reinterpret_cast<const char *>(m_ehdr.e_ident), 4);

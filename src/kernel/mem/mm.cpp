@@ -1,5 +1,5 @@
 #include "mm.hpp"
-#include <algo/memory.hpp>
+#include <cstring>
 
 // Hidden implementation details
 

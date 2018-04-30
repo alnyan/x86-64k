@@ -1,5 +1,11 @@
 #pragma once
 
+#ifndef NO_STDCXX
+#include <cstdint>
+#else
+#include <stdint.h>
+#endif
+
 #define ALIGNED(alignment) __attribute__((__aligned__(alignment)))
 #define ALIGNED_STRUCT(alignment) struct __attribute__((__aligned__(alignment)))
 #define PACKED_STRUCT struct __attribute__((__packed__))

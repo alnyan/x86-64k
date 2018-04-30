@@ -1,6 +1,6 @@
 #include "pm.hpp"
-#include <sys/types.h>
-#include <algo/memory.hpp>
+#include <stddef.h>
+#include <nostdcxx/string.hpp>
 
 uintptr_t pm::vaddr;
 
