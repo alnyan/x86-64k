@@ -1,6 +1,7 @@
 #include "string.hpp"
 #include <algo/algorithm.hpp>
 #include <sys/debug.hpp>
+#include <cstring>
 
 str::str(const char *ptr): m_length{strlen(ptr)}, m_data{ptr} {
 }

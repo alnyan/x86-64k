@@ -2,8 +2,9 @@
 #include <sys/types.h>
 #include <sys/debug.hpp>
 #include <algo/string.hpp>
-#include <sys/paging/ptse_arc_pae.hpp>
+#include <sys/paging/ptse_arc_base.hpp>
 #include <mem/mm.hpp>
+#include <mem/ptse_allocator.hpp>
 #include <mem/heap.hpp>
 #include <algo/new.hpp>
 #include <dev/rs232.hpp>
@@ -14,46 +15,17 @@
 #include <iostream>
 #include <vector>
 
-void validateLoaderData(LoaderData *data) {
-    uint32_t sum = 0;
-    for (size_t i = 0; i < sizeof(LoaderData); ++i) {
-        sum += reinterpret_cast<const uint8_t *>(data)[i];
-    }
-
-    assert((sum & 0xFF) == 0);
-}
-
 extern "C" void __cxa_atexit() {
     // C++ trying to register destructor
     // Just ignore this
 }
 
 extern "C" void __cxa_pure_virtual() {
-    panic_msg("__cxa_pure_virtual: pure virtual call encountered.");
+    debug::dpanic("__cxa_pure_virtual: pure virtual call encountered.");
 }
-
-extern "C" void _init();
-
-pml4_arc_t *arc;
-
-extern "C" void *memalign(size_t alignment, size_t size) {
-    return reinterpret_cast<void*>(mm::alloc(arc, 1, mm::AllocFlagsType(0)).orPanic("fuck"));
-}
-
-class test_allocator : public arc_allocator_t {
-private:
-    uintptr_t m_offs = 0x304000;
-public:
-    void *allocate() override { 
-        auto ptr = reinterpret_cast<void*>(m_offs);
-        m_offs += 0x4000;
-        return ptr;
-    }
-    void deallocate(void *ptr) override {}
-};
 
 extern "C" void kernel_main() {
-    debug::init();
+    /*debug::init();
     devices::rs232::SerialPort com1(0x3F8);
     devices::term80::TextTerminal b8;
     debug::regOutDev(&com1);
@@ -142,5 +114,5 @@ extern "C" void kernel_main() {
     debug::printf("returned from c9 to usermode\n");
 
     while (true) {
-    }
+    }*/
 }

@@ -2,6 +2,8 @@
 #include <stddef.h>
 #include <nostdcxx/string.hpp>
 
+using namespace debug;
+
 uintptr_t pm::vaddr;
 
 static uint32_t m_dataTracker[(0x200000 - 0x100000) >> 17]; // FIXME: magic numbers
@@ -11,8 +13,8 @@ void *pm::trackingPtr() {
 }
 
 bool pm::isFree(uintptr_t addr) {
-    assert(paging_region.contains(addr));
-    assert(!(addr & 0xFFF));
+    dassert(paging_region.contains(addr));
+    dassert(!(addr & 0xFFF));
     
     size_t idx = (addr - paging_region.start) >> 17;
     size_t bit = 1 << (((addr - paging_region.start) >> 12) & 0x1F);
@@ -25,13 +27,13 @@ bool pm::isFree(uintptr_t addr) {
 }
 
 uintptr_t pm::alloc() {
-    debug::printf("pm::alloc\n");
+    dprintf("pm::alloc\n");
     // Brute force scan here
     for (uintptr_t addr = paging_region.start; addr < paging_region.end; addr += 0x2000) {
         if (isFree(addr)) {        
             setAlloc(addr);
             memset(reinterpret_cast<void *>(addr), 0, 0x1000);
-            debug::printf(" = %a\n", addr);
+            dprintf(" = %a\n", addr);
             return addr;
         }
     }

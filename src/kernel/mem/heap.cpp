@@ -22,10 +22,10 @@ heap::Heap::~Heap() {
         // Make sure no objects are allocated when heap dies
         for (HeapHeader *hdr = rootHeader(); hdr; hdr = hdr->next) {
             if ((hdr->flags & heap::headerMagic) != heap::headerMagic) {
-                panic_msg("Heap is broken");
+                debug::dpanic("Heap is broken");
             }
             if (hdr->flags & heap::HeapFlags::HF_ALLOC) {
-                panic_msg("Tried to destroy heap with living objects");
+                debug::dpanic("Tried to destroy heap with living objects");
             }
         }
     }
@@ -35,10 +35,10 @@ void heap::Heap::reset(uintptr_t base, size_t size) {
     if (m_size) {
         for (HeapHeader *hdr = rootHeader(); hdr; hdr = hdr->next) {
             if ((hdr->flags & heap::headerMagic) != heap::headerMagic) {
-                panic_msg("Heap is broken");
+                debug::dpanic("Heap is broken");
             }
             if (hdr->flags & heap::HeapFlags::HF_ALLOC) {
-                panic_msg("Tried to destroy heap with living objects");
+                debug::dpanic("Tried to destroy heap with living objects");
             }
         }
     }
@@ -59,11 +59,11 @@ heap::HeapHeader *heap::Heap::rootHeader() {
 }
 
 option<void *> heap::Heap::alloc(size_t size) {
-    debug::printf("heap::alloc(%la) %lu\n", m_base, size);
+    debug::dprintf("heap::alloc(%la) %lu\n", m_base, size);
 
     for (HeapHeader *hdr = rootHeader(); hdr; hdr = hdr->next) {
         if ((hdr->flags & heap::headerMagic) != heap::headerMagic) {
-            panic_msg("Heap is broken");
+            debug::dpanic("Heap is broken");
         }
         if (hdr->flags & heap::HeapFlags::HF_ALLOC) {
             continue;
@@ -97,12 +97,12 @@ option<void *> heap::Heap::alloc(size_t size) {
 }
 
 option<void *> heap::Heap::allocAligned(size_t size, size_t align) {
-    debug::printf("heap::allocAligned(%la) %lu, align=0x%lx\n", m_base, size, align);
+    debug::dprintf("heap::allocAligned(%la) %lu, align=0x%lx\n", m_base, size, align);
     // TODO: check that align is power of two
 
     for (HeapHeader *hdr = rootHeader(); hdr; hdr = hdr->next) {
         if ((hdr->flags & heap::headerMagic) != heap::headerMagic) {
-            panic_msg("Heap is broken");
+            debug::dpanic("Heap is broken");
         }
         if (hdr->flags & heap::HeapFlags::HF_ALLOC) {
             continue;
@@ -194,21 +194,21 @@ option<void *> heap::Heap::allocAligned(size_t size, size_t align) {
 }
 
 void heap::Heap::free(void *p) {
-    debug::printf("heap::free(%la) %la\n", m_base, p);
+    debug::dprintf("heap::free(%la) %la\n", m_base, p);
     uintptr_t addr = reinterpret_cast<uintptr_t>(p);
     HeapHeader *hdr = reinterpret_cast<HeapHeader *>(addr - sizeof(HeapHeader));
 
-    assert((hdr->flags & heap::headerMagic) == heap::headerMagic);
+    dassert((hdr->flags & heap::headerMagic) == heap::headerMagic);
 
     if (!(hdr->flags & heap::HeapFlags::HF_ALLOC)) {
-        panic_msg("Heap object double-free detected: tried to free non-allocated pointer");
+        debug::dpanic("Heap object double-free detected: tried to free non-allocated pointer");
     }
 
     hdr->flags &= ~heap::HeapFlags::HF_ALLOC;
 
     while (hdr->prev) {
         HeapHeader *prev = hdr->prev;
-        assert((prev->flags & headerMagic) == headerMagic);
+        dassert((prev->flags & headerMagic) == headerMagic);
 
         if (prev->flags & heap::HeapFlags::HF_ALLOC) {
             break;
@@ -219,7 +219,7 @@ void heap::Heap::free(void *p) {
 
     while (hdr->next) {
         HeapHeader *next = hdr->next;
-        assert((next->flags & headerMagic) == headerMagic);
+        dassert((next->flags & headerMagic) == headerMagic);
 
         if (next->flags & heap::HeapFlags::HF_ALLOC) {
             break;
@@ -235,22 +235,22 @@ void heap::Heap::free(void *p) {
 }
 
 void heap::Heap::freeChecked(void *ptr, size_t sz) {
-    debug::printf("heap::freeChecked(%la) %la, sz = %lu\n", m_base, ptr, sz);
+    debug::dprintf("heap::freeChecked(%la) %la, sz = %lu\n", m_base, ptr, sz);
     uintptr_t addr = reinterpret_cast<uintptr_t>(ptr);
     HeapHeader *hdr = reinterpret_cast<HeapHeader *>(addr - sizeof(HeapHeader));
-    assert((hdr->flags & heap::headerMagic) == heap::headerMagic);
+    dassert((hdr->flags & heap::headerMagic) == heap::headerMagic);
 
-    assert(sz == hdr->length);
+    dassert(sz == hdr->length);
 
     free(ptr);
 }
 
 void heap::Heap::dump() {
-    debug::printf("heap::dump(%la)\n", m_base);
+    debug::dprintf("heap::dump(%la)\n", m_base);
     for (HeapHeader *hdr = rootHeader(); hdr; hdr = hdr->next) {
         uintptr_t addr = reinterpret_cast<uintptr_t>(hdr) + sizeof(HeapHeader);
 
-        debug::printf(" * %la - %la, %s\n", addr, addr + hdr->length, (hdr->flags & heap::HeapFlags::HF_ALLOC) ? "USED" : "FREE");
+        debug::dprintf(" * %la - %la, %s\n", addr, addr + hdr->length, (hdr->flags & heap::HeapFlags::HF_ALLOC) ? "USED" : "FREE");
     }
 }
 
@@ -258,8 +258,8 @@ bool heap::Heap::valid() const {
     return m_size && m_base;
 }
 
-void heap::init(pml4_arc_t *arc) {
+void heap::init(pml4_arc_t<ptse_allocator_t> *arc) {
     auto heapRegion = mm::alloc(arc, 16, mm::AllocFlagsType::AF_RW).orPanic("Failed to allocate memory for kernel heap");
     kernelHeap.reset(heapRegion, 16 * 0x200000);
-    debug::printf("Created heap at %la, size %lu\n", heapRegion, 16 * 0x200000);
+    debug::dprintf("Created heap at %la, size %lu\n", heapRegion, 16 * 0x200000);
 }

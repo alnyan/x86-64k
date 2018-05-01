@@ -1,10 +1,12 @@
 #pragma once
-#include <sys/panic.hpp>
+#include <sys/debug.hpp>
 
 // костыль
 #ifdef __LP64__ 
-#include <new>    
+#include <new>
+#include <cstdint>
 #else
+#include <stdint.h>
 inline void *operator new(size_t v, void *p) throw() {
     return p;
 }
@@ -33,14 +35,14 @@ public:
 
     const T &operator *() const {
         if (!m_ptr) {
-            panic_msg("Attempted to dereference empty option<T>\n");
+            debug::dpanic("Attempted to dereference empty option<T>\n");
         }
         return *m_ptr;
     }
 
     const T &orPanic(const char *msg) const {
         if (!m_ptr) {
-            panic_msg(msg);
+            debug::dpanic(msg);
         }
         return *m_ptr;
     }

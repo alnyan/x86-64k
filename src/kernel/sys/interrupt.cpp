@@ -42,10 +42,10 @@ void isr_set_handler(int interrupt, interrupt_handler handler, int rpl) {
         return;
     }
     
-    debug::printf("m_idt at %a\n", m_idt_entries);
-    debug::printf("setting interrupt %x\n", interrupt);
-    debug::printf("pwning entry at %a\n", &m_idt_entries[interrupt]);
-    debug::printf("entry size: %d\n", sizeof(idt_entry_t));
+    debug::dprintf("m_idt at %a\n", m_idt_entries);
+    debug::dprintf("setting interrupt %x\n", interrupt);
+    debug::dprintf("pwning entry at %a\n", &m_idt_entries[interrupt]);
+    debug::dprintf("entry size: %d\n", sizeof(idt_entry_t));
     m_idt_entries[interrupt].offset_1 = reinterpret_cast<uintptr_t>(handler) & 0xffff;
     m_idt_entries[interrupt].offset_2 = (reinterpret_cast<uintptr_t>(handler) >> 16) & 0xffff;
     m_idt_entries[interrupt].offset_3 = (reinterpret_cast<uintptr_t>(handler) >> 32) & 0xffffffff;

@@ -2,7 +2,8 @@
 #include <sys/types.h>
 #include <stdint.h>
 #include <opt/option.hpp>
-#include <sys/paging/ptse_arc_pae.hpp>
+#include <sys/paging/ptse_arc_base.hpp>
+#include <mem/ptse_allocator.hpp>
 
 namespace heap {
 
@@ -116,6 +117,6 @@ namespace heap {
     extern Heap kernelHeap;
 
     /// Initializes kernel heap
-    void init(pml4_arc_t *arc);
+    void init(pml4_arc_t<ptse_allocator_t> *arc);
 
 }

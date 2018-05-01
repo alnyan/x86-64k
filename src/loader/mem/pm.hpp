@@ -18,7 +18,7 @@ namespace pm {
 
     template<typename T> void set(T *p) {
         uintptr_t addr = reinterpret_cast<uintptr_t>(p);
-        assert(paging_region.contains(addr)); // Paging region is identity-mapped
+        dassert(paging_region.contains(addr)); // Paging region is identity-mapped
         vaddr = addr;
         pm_load(vaddr);                       // No address translation needed
     }

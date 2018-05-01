@@ -1,9 +1,9 @@
-#include <sys/panic.hpp>
+#include <sys/debug.hpp>
 #include <mem/heap.hpp>
 #include <reent.h>
 
-#define STUB(name) void name() { panic_msg(#name " is not implemented"); }
-#define STUBD(name, type, ...) type name(__VA_ARGS__) { panic_msg(#name " is not implemented"); }
+#define STUB(name) void name() { debug::dpanic(#name " is not implemented"); }
+#define STUBD(name, type, ...) type name(__VA_ARGS__) { debug::dpanic(#name " is not implemented"); }
 
 extern "C" {
     typedef int FILE;
@@ -12,23 +12,23 @@ extern "C" {
     struct _reent *_impure_ptr = &_impure_data;
 
     size_t fwrite ( const void * ptr, size_t size, size_t count, FILE * stream ) {
-        debug::printf(static_cast<const char*>(ptr));
+        debug::dprintf(static_cast<const char*>(ptr));
         return count;
     }
     void *malloc(size_t sz) { 
-        debug::printf("malloc of size %d\n", sz);
+        debug::dprintf("malloc of size %d\n", sz);
         auto ptr = heap::kernelHeap.alloc(sz).orPanic("malloc failed");
-        debug::printf("mallocated ptr %a\n", ptr);
+        debug::dprintf("mallocated ptr %a\n", ptr);
         return ptr;
     }
     void free(void *ptr) { 
-        debug::printf("dealloc of ptr %a\n", ptr);
+        debug::dprintf("dealloc of ptr %a\n", ptr);
         return heap::kernelHeap.free(ptr);
     }
     int fflush(FILE *stream) { return 0; }
     int putc(int chr, FILE *stream) { 
         char ch[2] = {static_cast<char>(chr), 0};
-        debug::puts(ch); 
+        debug::dputs(ch); 
         return chr;
     }
 

@@ -1,8 +1,10 @@
 #include "../loader/loader.hpp"
 #include <sys/types.h>
 #include <sys/debug.hpp>
+#include <sys/lodebug.hpp>
 #include <algo/string.hpp>
-#include <sys/paging/ptse_arc_pae.hpp>
+#include <sys/paging/ptse_arc_base.hpp>
+#include <mem/ptse_allocator.hpp>
 #include <mem/mm.hpp>
 #include <mem/heap.hpp>
 #include <algo/new.hpp>
@@ -12,23 +14,9 @@
 #include <sys/isr.hpp>
 #include <sys/gdt.hpp>
 #include <vector>
+#include <opt/status.hpp>
 
-extern "C" void _init();
-
-extern pml4_arc_t *arc;
-
-class test_allocator : public arc_allocator_t {
-private:
-    uintptr_t m_offs = 0x304000;
-public:
-    void *allocate() override { 
-        debug::printf("allocating\n");
-        auto ptr = reinterpret_cast<void*>(m_offs);
-        m_offs += 0x4000;
-        return ptr;
-    }
-    void deallocate(void *ptr) override {}
-};
+pml4_arc_t<ptse_allocator_t> *arc;
 
 extern "C" void kernel_preinit() {
     debug::init();
@@ -40,29 +28,29 @@ extern "C" void kernel_preinit() {
     // setting up new, valid GDT (and also TSS)
     gdt::init();
 
-    debug::printf("Entered kernel\n");
+    debug::dprintf("Entered kernel\n");
     
     // not necessary at this point
     // validateLoaderData(loaderData);
 
     // temporary paging 
 
-    debug::printf("setting up temporary pml4 at wrong place\n");
+    debug::dprintf("setting up temporary pml4 at wrong place\n");
     test_allocator allocator;
-    debug::printf("allocating\n");
-    arc = new (reinterpret_cast<void*>(0x300000)) pml4_arc_t(&allocator);
+    debug::dprintf("allocating\n");
+    arc = new (reinterpret_cast<void*>(0x300000)) pml4_arc_t<ptse_allocator_t>;
     uint64_t vma64 = 0x4000000000;
 
-    debug::printf("mapping\n");
-    arc->map(0x0, 0x0, pml4_arc_t::LEVEL_2M, page_struct_flags_t(PTSE_FLAG_RW | PTSE_FLAG_RING3));
-    arc->map(0x200000, 0x200000, pml4_arc_t::LEVEL_2M, page_struct_flags_t(PTSE_FLAG_RW | PTSE_FLAG_RING3));
-    arc->map(vma64,            0x1000000, pml4_arc_t::LEVEL_2M, page_struct_flags_t(PTSE_FLAG_RW | PTSE_FLAG_RING3)); // TODO: map more pages if needed
-    arc->map(vma64 + 0x200000, 0x1200000, pml4_arc_t::LEVEL_2M, page_struct_flags_t(PTSE_FLAG_RW | PTSE_FLAG_RING3)); // TODO: map more pages if needed
-    arc->map(vma64 + 0x400000, 0x1400000, pml4_arc_t::LEVEL_2M, page_struct_flags_t(PTSE_FLAG_RW | PTSE_FLAG_RING3)); // TODO: map more pages if needed
-    arc->map(vma64 + 0x600000, 0x1600000, pml4_arc_t::LEVEL_2M, page_struct_flags_t(PTSE_FLAG_RW | PTSE_FLAG_RING3)); // TODO: map more pages if needed
-    arc->map(vma64 + 0x800000, 0x1800000, pml4_arc_t::LEVEL_2M, page_struct_flags_t(PTSE_FLAG_RW | PTSE_FLAG_RING3)); // TODO: map more pages if needed
+    debug::dprintf("mapping\n");
+    arc->map(0x0, 0x0, pt_page_size_t::SIZE_2M, pt_page_flags_t(PAGE_FLAG_RW | PAGE_FLAG_RING3));
+    arc->map(0x200000, 0x200000, pt_page_size_t::SIZE_2M, pt_page_flags_t(PAGE_FLAG_RW | PAGE_FLAG_RING3));
+    arc->map(vma64,            0x1000000, pt_page_size_t::SIZE_2M, pt_page_flags_t(PAGE_FLAG_RW | PAGE_FLAG_RING3)); // TODO: map more pages if needed
+    arc->map(vma64 + 0x200000, 0x1200000, pt_page_size_t::SIZE_2M, pt_page_flags_t(PAGE_FLAG_RW | PAGE_FLAG_RING3)); // TODO: map more pages if needed
+    arc->map(vma64 + 0x400000, 0x1400000, pt_page_size_t::SIZE_2M, pt_page_flags_t(PAGE_FLAG_RW | PAGE_FLAG_RING3)); // TODO: map more pages if needed
+    arc->map(vma64 + 0x600000, 0x1600000, pt_page_size_t::SIZE_2M, pt_page_flags_t(PAGE_FLAG_RW | PAGE_FLAG_RING3)); // TODO: map more pages if needed
+    arc->map(vma64 + 0x800000, 0x1800000, pt_page_size_t::SIZE_2M, pt_page_flags_t(PAGE_FLAG_RW | PAGE_FLAG_RING3)); // TODO: map more pages if needed
     arc->apply();
-    debug::printf("done\n");
+    debug::dprintf("done\n");
 
     mm::init();
     heap::init(arc);
@@ -73,7 +61,7 @@ extern "C" void kernel_preinit() {
         reinterpret_cast<uint8_t*>(heap::kernelHeap.allocAligned(taskswitchStackSize, sizeof(uintptr_t)).orPanic("Couldn't allocate task-switch stack"));
     gdt::setTaskswitchStack(taskswitchStack + taskswitchStackSize); // passing upper bound
     
-    debug::printf("enabling fpu+sse\n");
+    debug::dprintf("enabling fpu+sse\n");
     asm volatile (
         "push %rax\n"
         "mov %cr0, %eax\n"

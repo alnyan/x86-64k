@@ -1,7 +1,6 @@
 #include <dev/vesa.hpp>
 #include <sys/debug.hpp>
-#include <sys/panic.hpp>
-#include <sys/emu/emu16_64.hpp>
+#include <cstdint>
 
 using namespace debug;
 
@@ -53,11 +52,11 @@ static void initMore(ivt_entry handler) {
 */}
 
 void vesa::init() {
-    printf("vesa: observing IVT\n");
+    dprintf("vesa: observing IVT\n");
     ivt_entry entry = *reinterpret_cast<ivt_entry*>(VESA_VIDEO_INTERRUPT * sizeof(ivt_entry));
     uintptr_t handlerPtr = CPU_REAL_TO_LINEAR(entry.segment, entry.offset);
     bool valid = HANDLER_PTR_LOOKS_LIKE_VALID(handlerPtr);
-    printf("vesa: int 10h handler located in %04x:%04x, linear: %a, seems %s\n", entry.segment, entry.offset, handlerPtr, 
+    dprintf("vesa: int 10h handler located in %04x:%04x, linear: %a, seems %s\n", entry.segment, entry.offset, handlerPtr, 
         valid ? "ok" : "not very valid");
 
     if (valid) {

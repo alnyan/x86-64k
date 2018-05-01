@@ -14,6 +14,7 @@
 using bit_t = uint8_t;
 
 enum page_struct_flags_t : uint64_t {
+    PTSE_FLAG_NONE          = 0,
     PTSE_FLAG_PRESENT       = 1ull << 0,
     PTSE_FLAG_RW            = 1ull << 1,
     PTSE_FLAG_RING3         = 1ull << 2,
@@ -29,7 +30,7 @@ enum page_struct_flags_t : uint64_t {
 };
 
 const int PTSE_SIZEOF = 0x1000;
-const int PTSE_PAGE_SIZE = 0x1000;
+const int PTSE_PAGE_SIZE = PTSE_SIZEOF;
 const int PTSE_ENTRIES32 = PTSE_SIZEOF / sizeof(uint32_t);
 const int PTSE_ENTRIES64 = PTSE_SIZEOF / sizeof(uint64_t);
 const int PTSE_PDPT32_ENTRIES = 4;
